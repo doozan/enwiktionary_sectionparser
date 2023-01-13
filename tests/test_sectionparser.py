@@ -1,5 +1,5 @@
 import pytest
-from ..sectionparser import SectionParser, Section
+from enwiktionary_sectionparser.sectionparser import SectionParser, Section
 
 def test_is_section():
     assert Section.is_category("[[Category:en:Trees]]") == True
