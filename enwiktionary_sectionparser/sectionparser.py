@@ -1,24 +1,35 @@
+# Copyright (c) 2022-2023 Jeff Doozan
+#
+# This is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import re
 
 class SectionParser():
 
-    def log(self, error, section, line):
-        lineage = list(section.lineage) if section else [ self.title, "" ]
-        page = lineage.pop
-        path = ":".join(reversed(lineage))
-        self._log.append((error, path, line))
-        return
-
-    error = log
-
-    def __init__(self, text, page_title):
+    def __init__(self, text, page_title, log=None):
+        """
+        text = page text
+        title = page title
+        log = list to append log messages
+        """
         self.title = page_title
         self.level = 1
+        self._log = log
 
         self._header = []
         self._children = []
 
-        self._log = []
         self._changes = []
 
         # Parser states
@@ -30,6 +41,25 @@ class SectionParser():
         self.has_comment = False
 
         self._parse(text)
+
+    def log(self, error, section, line):
+        if self._log is None:
+            return
+        lineage = list(section.lineage) if section else [ self.title, "" ]
+        page = lineage.pop
+        path = ":".join(reversed(lineage))
+        self._log.append((error, path, line))
+        return
+
+    @property
+    def changelog(self):
+        summary = []
+        seen = set()
+        for item in self._changes:
+            if item not in seen:
+                summary.append(item)
+                seen.add(item)
+        return "; ".join(summary)
 
     def add(self, item):
         if isinstance(item, str):
@@ -145,7 +175,7 @@ class SectionParser():
                         header_comment = m.group(4)
                         self.log("comment_on_title", section, line)
                     else:
-                        self.error("text_on_title", section, line)
+                        self.log("text_on_title", section, line)
 
                 m = re.match(r"\s*(.*?)\s*(\d*)\s*$", m.group(2))
 
@@ -172,17 +202,14 @@ class SectionParser():
                         separators = between_text.count("----")
                         if separators < 1:
                             self._changes.append("added L2 separator")
-                            #print(section.path, [between_text], new_section.path)
                         elif separators > 1:
                             self._changes.append("removed duplicate L2 separator")
                         elif (section._topmost._categories and separator != ["", "", "----", ""]) \
                                 or (not section._topmost._categories and separator != ["", "----", ""]):
-                            #print("L2", self.title, section.path, section._trailing_empty_lines, new_section.path)
                             self._changes.append("whitespace changes")
 
                     elif (not section._lines and not section._children and section._trailing_empty_lines != [])\
                             or ((section._lines or section._children) and section._trailing_empty_lines != [""]):
-                        #print(self.title, section.path, section._trailing_empty_lines, new_section.path, bool(section._lines), bool(section._children))
                         self._changes.append("whitespace changes")
 
                     self._changes += section._changes
@@ -209,11 +236,13 @@ class SectionParser():
 
 class Section():
 
+    # Category templates should always be at the very end of the last section
     cat_templates = [ "c", "C", "cat", "top", "topic", "topics", "categorize", "catlangname", "catlangcode", "cln", "zh-cat" ]
     re_cat_templates = r"\{\{\s*(" + "|".join(cat_templates) + r")\s*[|}][^{}]*\}*"
     re_categories = r"\[\[\s*Category\s*:[^\]]*\]\]"
     re_match_categories = fr"({re_cat_templates}|{re_categories})"
 
+    # Templates that should always appear at the top of an entry immediately after the L2 header
     topline_templates = [ "LDL", "normalized", "hot word", "rfd" ]
     re_match_toplines = r"(\{\{\s*(" + "|".join(topline_templates) + r")\s*[|}][^}]*\}*)"
 
@@ -415,18 +444,3 @@ class Section():
 
     def __str__(self):
         return self.header + self.toplines + self.lines + "".join(list(map(str, self._children))) + self.categories
-
-
-# this can be called by any cleanup fix that uses SectionParser
-# it will generate summary details for any changes applied by
-# SectionParser
-def cleanup_summary(text, title, summary, custom):
-    entry = SectionParser(text, title)
-
-    seen = set()
-    for item in entry._changes:
-        if item not in seen:
-            summary.append(item)
-            seen.add(item)
-
-    return str(entry)
