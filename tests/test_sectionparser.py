@@ -1,4 +1,5 @@
 import pytest
+import enwiktionary_sectionparser as enwiktparser
 from enwiktionary_sectionparser.sectionparser import SectionParser, Section
 
 def test_is_section():
@@ -167,4 +168,47 @@ blah}}\
     res = str(parsed)
     print(res)
     assert res.splitlines() == text.splitlines()
+
+def test_general():
+
+    page_text = """
+==English==
+
+===Etymology 1===
+
+====Noun====
+
+====Verb====
+
+====Usage notes====
+
+===Etymology 2===
+
+====Noun====
+
+===References===
+
+==Japanese==
+
+===Noun===
+"""
+    page_title = "test"
+
+    entry = enwiktparser.parse(page_text, page_title)
+    assert len(entry.filter_sections()) == 10
+    assert len(entry.filter_sections(recursive=False)) == 2
+    assert len(entry.filter_sections(matches="Etymology")) == 2
+    assert len(entry.filter_sections(matches="Noun")) == 3
+    assert len(entry.filter_sections(matches=lambda section: section.title in ["Verb", "Noun"])) == 4
+
+
+    japanese = next(entry.ifilter_sections(matches="Japanese", recursive=False), None)
+    assert len(japanese.filter_sections()) == 1
+    japanese_nouns = japanese.filter_sections(matches="Noun")
+    assert len(japanese_nouns) == 1
+    jnoun = japanese_nouns[0]
+    assert jnoun.path == "Japanese:Noun"
+
+    japanese_verbs = japanese.filter_sections(matches="Verb")
+    assert len(japanese_verbs) == 0
 
