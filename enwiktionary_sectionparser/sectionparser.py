@@ -27,20 +27,10 @@ class SectionParser():
         self.level = 1
         self._log = log
 
-        self._header = []
-        self._children = []
-
-        self._changes = []
-
-        # Parser states
-        self.in_comment = False
-        self.in_nowiki = False
-        self.template_depth = []
-
         self.has_nowiki = False
         self.has_comment = False
 
-        self._parse(text)
+        self._header, self._children, self._changes = self.parse(text)
 
     def log(self, error, section, line):
         if self._log is None:
@@ -60,12 +50,6 @@ class SectionParser():
                 summary.append(item)
                 seen.add(item)
         return "; ".join(summary)
-
-    def add(self, item):
-        if isinstance(item, str):
-            self._header.append(item)
-        else:
-            self._children.append(item)
 
     def ifilter_sections(self, recursive=True, matches=lambda x: True):
 
@@ -132,12 +116,21 @@ class SectionParser():
             elif item == "<nowiki>":
                 self.in_nowiki = True
 
-    def _parse(self, text):
 
-        references = False
+    def parse(self, text):
+
+        # Parser states
+        self.in_comment = False
+        self.in_nowiki = False
+        self.template_depth = []
+
         section = None
         parent = None
         header_comment = None
+
+        header = []
+        children = []
+        changes = []
 
         for line in text.splitlines():
 
@@ -150,7 +143,7 @@ class SectionParser():
 
             if line_state:
                 if not section:
-                    self._header.append(line)
+                    header.append(line)
                 else:
                     section.add(line, line_state)
 
@@ -201,37 +194,43 @@ class SectionParser():
                         between_text = "\n".join(section._trailing_empty_lines)
                         separators = between_text.count("----")
                         if separators < 1:
-                            self._changes.append("added L2 separator")
+                            changes.append("added L2 separator")
                         elif separators > 1:
-                            self._changes.append("removed duplicate L2 separator")
+                            changes.append("removed duplicate L2 separator")
                         elif (section._topmost._categories and separator != ["", "", "----", ""]) \
                                 or (not section._topmost._categories and separator != ["", "----", ""]):
-                            self._changes.append("whitespace changes")
+                            changes.append("whitespace changes")
 
                     elif (not section._lines and not section._children and section._trailing_empty_lines != [])\
                             or ((section._lines or section._children) and section._trailing_empty_lines != [""]):
-                        self._changes.append("whitespace changes")
+                        changes.append("whitespace changes")
 
-                    self._changes += section._changes
+                    changes += section._changes
 
-                parent.add(new_section)
+                if parent == self:
+                    children.append(new_section)
+                else:
+                    parent.add(new_section)
+
                 section = new_section
                 if header_comment:
                     section.add(header_comment)
                     header_comment = None
 
                 if new_section.header != line:
-                    self._changes.append("whitespace changes")
+                    changes.append("whitespace changes")
 
                 continue
 
             if not section:
-                self._header.append(line)
+                header.append(line)
             else:
                 section.add(line)
 
         if section:
-            self._changes += section._changes
+            changes += section._changes
+
+        return header, children, changes
 
 
 class Section():
