@@ -30,7 +30,14 @@ class SectionParser():
         self.has_nowiki = False
         self.has_comment = False
 
-        self._header, self._children, self._changes = self.parse(text)
+        self._changes = []
+        clean_text = text.replace('\u2029', "")
+        if clean_text != text:
+            self._changes.append("removed unicode paragraph separator")
+
+        self._header, self._children, changes = self.parse(clean_text)
+        self._changes += changes
+
 
     def log(self, error, section, line):
         if self._log is None:
@@ -199,11 +206,11 @@ class SectionParser():
                             changes.append("removed duplicate L2 separator")
                         elif (section._topmost._categories and separator != ["", "", "----", ""]) \
                                 or (not section._topmost._categories and separator != ["", "----", ""]):
-                            changes.append("whitespace changes")
+                            changes.append("adjusted whitespace per WT:NORM")
 
                     elif (not section._lines and not section._children and section._trailing_empty_lines != [])\
                             or ((section._lines or section._children) and section._trailing_empty_lines != [""]):
-                        changes.append("whitespace changes")
+                        changes.append("adjusted whitespace per WT:NORM")
 
                     changes += section._changes
 
@@ -218,7 +225,7 @@ class SectionParser():
                     header_comment = None
 
                 if new_section.header != line:
-                    changes.append("whitespace changes")
+                    changes.append("adjusted whitespace per WT:NORM")
 
                 continue
 
@@ -236,9 +243,10 @@ class SectionParser():
 class Section():
 
     # Category templates should always be at the very end of the last section
-    cat_templates = [ "c", "C", "cat", "top", "topic", "topics", "categorize", "catlangname", "catlangcode", "cln", "zh-cat" ]
+    cat_templates = [ "c", "C", "cat", "top", "topic", "topics", "categorize", "catlangname", "catlangcode", "cln", "zh-cat",
+            "eo F", "eo [1-9]OA", "eo-categoryTOC", "eo BRO", "eo GCSE", "Universala Vortaro" ]
     re_cat_templates = r"\{\{\s*(" + "|".join(cat_templates) + r")\s*[|}][^{}]*\}*"
-    re_categories = r"\[\[\s*Category\s*:[^\]]*\]\]"
+    re_categories = r"\[\[\s*[cC]ategory\s*:[^\]]*\]\]"
     re_match_categories = fr"({re_cat_templates}|{re_categories})"
 
     # Templates that should always appear at the top of an entry immediately after the L2 header
@@ -334,7 +342,7 @@ class Section():
             elif re.match(r"^(----+)?\s*$", item):
                 # Ignore empty lines before first data item
                 if not self._lines:
-                    self._changes.append("whitespace changes")
+                    self._changes.append("adjusted whitespace per WT:NORM")
                     return
                 # buffer empty lines until there is a data line
                 self._trailing_empty_lines.append(item)
