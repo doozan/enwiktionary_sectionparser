@@ -74,15 +74,11 @@ blah
 blah
 !-->
 
-----
-
 ==Thai==
 blah
 
 ====Noun====
 # text
-
-----
 
 ==Spanish==
 
@@ -135,15 +131,9 @@ def test_l2_joiner():
     result = """\
 ==Translingual==
 
-----
-
 ==English==
 
-----
-
 ==Thai==
-
-----
 
 ==Spanish==
 """

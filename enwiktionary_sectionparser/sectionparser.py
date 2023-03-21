@@ -80,7 +80,7 @@ class SectionParser():
         return ""
 
     def __str__(self):
-        return self.header + "\n----\n\n".join(list(map(str, self._children))).rstrip()
+        return self.header + "\n".join(list(map(str, self._children))).rstrip()
 
     @property
     def state(self):
@@ -196,19 +196,7 @@ class SectionParser():
                 new_section = Section(parent, level, title, count)
 
                 if section:
-                    separator = section._trailing_empty_lines
-                    if level == 2:
-                        between_text = "\n".join(section._trailing_empty_lines)
-                        separators = between_text.count("----")
-                        if separators < 1:
-                            changes.append("added L2 separator")
-                        elif separators > 1:
-                            changes.append("removed duplicate L2 separator")
-                        elif (section._topmost._categories and separator != ["", "", "----", ""]) \
-                                or (not section._topmost._categories and separator != ["", "----", ""]):
-                            changes.append("adjusted whitespace per WT:NORM")
-
-                    elif (not section._lines and not section._children and section._trailing_empty_lines != [])\
+                    if (not section._lines and not section._children and section._trailing_empty_lines != [])\
                             or ((section._lines or section._children) and section._trailing_empty_lines != [""]):
                         changes.append("adjusted whitespace per WT:NORM")
 
@@ -350,11 +338,11 @@ class Section():
             elif self.is_category(item):
                 self._add_category(item)
 
-            elif self.is_topline(item):
-                if self._lines or self._topmost != self:
-                    template = re.search(r"\{\{([^|}]*)", item).group(1)
-                    self._changes.append(f"/*{self._topmost.path}*/ moved {template} template to top")
-                self._add_topline(item)
+#            elif self.is_topline(item):
+#                if self._lines or self._topmost != self:
+#                    template = re.search(r"\{\{([^|}]*)", item).group(1)
+#                    self._changes.append(f"/*{self._topmost.path}*/ moved {template} template to top")
+#                self._add_topline(item)
 
             else:
                 if self._trailing_empty_lines:
