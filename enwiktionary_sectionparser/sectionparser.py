@@ -196,8 +196,15 @@ class SectionParser():
                 new_section = Section(parent, level, title, count)
 
                 if section:
-                    if (not section._lines and not section._children and section._trailing_empty_lines != [])\
-                            or ((section._lines or section._children) and section._trailing_empty_lines != [""]):
+                    if level == 2 and any("----" in line for line in section._trailing_empty_lines):
+                        changes.append("removed ---- L2 separator")
+
+                    # Empty sections should have a single leading empty line
+                    elif not section._lines and not section._children and section._leading_empty_lines != [""]:
+                        changes.append("adjusted whitespace per WT:NORM")
+
+                    # All other sections should end with a single blank line
+                    elif (section._lines or section._children) and section._trailing_empty_lines != [""]:
                         changes.append("adjusted whitespace per WT:NORM")
 
                     changes += section._changes
@@ -212,7 +219,7 @@ class SectionParser():
                     section.add(header_comment)
                     header_comment = None
 
-                if new_section.header != line:
+                if new_section.header.strip() != line:
                     changes.append("adjusted whitespace per WT:NORM")
 
                 continue
@@ -248,6 +255,7 @@ class Section():
         self.count = count
 
         self._lines = []
+        self._leading_empty_lines = []
         self._trailing_empty_lines = []
         self._children = []
 
@@ -328,14 +336,18 @@ class Section():
                 self._lines.append(item)
 
             elif re.match(r"^(----+)?\s*$", item):
-                # Ignore empty lines before first data item
                 if not self._lines:
-                    self._changes.append("adjusted whitespace per WT:NORM")
-                    return
-                # buffer empty lines until there is a data line
-                self._trailing_empty_lines.append(item)
+                    # Ignore empty lines before first data item
+                    self._leading_empty_lines.append(item)
+                else:
+                    # buffer empty lines until there is a data line
+                    self._trailing_empty_lines.append(item)
 
             elif self.is_category(item):
+                # Strip any whitespace before the category
+                if self._trailing_empty_lines:
+                    self._trailing_empty_lines = []
+
                 self._add_category(item)
 
 #            elif self.is_topline(item):
