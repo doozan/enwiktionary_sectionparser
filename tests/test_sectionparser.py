@@ -161,7 +161,7 @@ blah}}\
 
 def test_general():
 
-    page_text = """
+    page_text = """\
 ==English==
 
 ===Etymology 1===
@@ -170,7 +170,9 @@ def test_general():
 
 ====Verb====
 
-====Usage notes====
+=====Usage notes=====
+
+====Adjective=====
 
 ===Etymology 2===
 
@@ -185,7 +187,7 @@ def test_general():
     page_title = "test"
 
     entry = enwiktparser.parse(page_text, page_title)
-    assert len(entry.filter_sections()) == 10
+    assert len(entry.filter_sections()) == 11
     assert len(entry.filter_sections(recursive=False)) == 2
     assert len(entry.filter_sections(matches="Etymology")) == 2
     assert len(entry.filter_sections(matches="Noun")) == 3
@@ -202,3 +204,65 @@ def test_general():
     japanese_verbs = japanese.filter_sections(matches="Verb")
     assert len(japanese_verbs) == 0
 
+    ety1 = entry.filter_sections(matches="Etymology")[0]
+    ety2 = entry.filter_sections(matches="Etymology")[1]
+
+    verb = ety1.filter_sections(matches="Verb")[0]
+    verb.reparent(ety2)
+
+    print("---")
+    print(entry)
+    print("---")
+
+    assert str(entry) == """\
+==English==
+
+===Etymology 1===
+
+====Noun====
+
+====Adjective=====
+
+===Etymology 2===
+
+====Noun====
+
+====Verb====
+
+=====Usage notes=====
+
+===References===
+
+==Japanese==
+
+===Noun===\
+"""
+
+
+    adj = ety1.filter_sections(matches="Adjective=")[0]
+    # Re-parenting the section will cleanup the stray =
+    adj.reparent(ety2, 0)
+
+    assert str(entry) == """\
+==English==
+
+===Etymology 1===
+
+====Noun====
+
+===Etymology 2===
+
+====Adjective====
+
+====Noun====
+
+====Verb====
+
+=====Usage notes=====
+
+===References===
+
+==Japanese==
+
+===Noun===\
+"""

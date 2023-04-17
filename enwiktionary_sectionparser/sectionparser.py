@@ -271,6 +271,9 @@ class Section():
         self._topmost = target
 
     def adjust_level(self, new_level):
+        # Strip any unbalanced = in the title
+        # when explicitly setting the level
+        self.title = self.title.strip("= ")
         if new_level != self.level:
             self.level = new_level
             for child in self._children:
