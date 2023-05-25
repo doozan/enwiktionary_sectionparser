@@ -347,6 +347,15 @@ class Section():
                     self._trailing_empty_lines.append(item)
 
             elif self.is_category(item):
+
+                # if this is the first category, there should be one blank line before it
+                if not self._topmost._categories and self._trailing_empty_lines != [""]:
+                    self._changes.append("adjusted whitespace per WT:NORM")
+
+                # otherwise, there should be no blank lines
+                if self._topmost._categories and self._trailing_empty_lines != []:
+                    self._changes.append("adjusted whitespace per WT:NORM")
+
                 # Strip any whitespace before the category
                 if self._trailing_empty_lines:
                     self._trailing_empty_lines = []
