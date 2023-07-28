@@ -1,6 +1,32 @@
 import pytest
 import enwiktionary_sectionparser as enwiktparser
-from enwiktionary_sectionparser.sectionparser import SectionParser, Section
+from enwiktionary_sectionparser.sectionparser import SectionParser, Section, text_to_wikilines
+
+def test_text_to_wikilines():
+
+    text = """\
+{{template}}
+==Section==
+{{header}}
+<!-- comment
+comment -->
+{{template|
+template}} {{t
+|template}}
+"""
+    expected = [
+        '{{template}}',
+        '==Section==',
+        '{{header}}',
+        '<!-- comment\ncomment -->',
+        '{{template|\ntemplate}} {{t\n|template}}'
+    ]
+
+    res = text_to_wikilines(text)
+    print(res)
+    assert res == expected
+
+
 
 def test_is_section():
     assert Section.is_category("[[Category:en:Trees]]") == True
@@ -100,6 +126,8 @@ blah
 
     parsed = SectionParser(text, "test")
 
+#    print(parsed._header)
+
     assert len(parsed._children) == 3
     assert len(list(parsed.ifilter_sections())) == 9
 
@@ -151,13 +179,54 @@ def test_categories_inside_open_templates():
 ===Noun===
 # blah {{blah|
 [[Category:en:blah]]
-blah}}\
+blah}}
+# bar\
 """
 
     parsed = SectionParser(text, "test")
     res = str(parsed)
     print(res)
     assert res.splitlines() == text.splitlines()
+
+
+def test_content_wikilines():
+    text = """\
+===Noun===
+
+# multiline_template {{template|foo
+|bar}}
+# simple item
+# multiline_comment and multiline_template <!--
+# commented line
+--> {{open_template|test=
+template line
+}}
+# ignore open template inside html comment <!--
+# {{commented|open|template
+-->
+# ignore closing template inside comment {{template|
+blah <!-- }} -->
+ending }}
+#: multiple multiline_templates {{ux|en|1
+}}{{ux|en|2
+}}{{ux|en|3
+}}
+# {{trailing unclosed
+"""
+    expected = [
+        '# multiline_template {{template|foo\n|bar}}',
+        '# simple item',
+        '# multiline_comment and multiline_template <!--\n# commented line\n--> {{open_template|test=\ntemplate line\n}}',
+        '# ignore open template inside html comment <!--\n# {{commented|open|template\n-->',
+        '# ignore closing template inside comment {{template|\nblah <!-- }} -->\nending }}',
+        '#: multiple multiline_templates {{ux|en|1\n}}{{ux|en|2\n}}{{ux|en|3\n}}',
+        '# {{trailing unclosed'
+    ]
+
+    parsed = SectionParser(text, "test")
+    section = parsed.filter_sections(matches="Noun")[0]
+    assert section.content_wikilines == expected
+
 
 def test_general():
 

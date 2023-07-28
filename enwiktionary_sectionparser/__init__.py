@@ -18,7 +18,7 @@ def parse(text, title, log=None):
     # Pages with an unclosed template or html comment are not safe to edit automatically
     # return None *unless* logging has been enabled in which case it is assumed
     # that the caller knows enough to handle any errors
-    if log is None and entry.state:
+    if entry._state and log is None:
         return
 
     return entry

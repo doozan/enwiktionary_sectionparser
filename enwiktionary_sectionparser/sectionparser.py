@@ -15,6 +15,83 @@
 
 import re
 
+
+def get_state(line, existing_state):
+    """
+    line: a line of text that may include "opening" and "closing" tags
+    existing state: state at beginning of line
+       0 if this is the first line parsed, otherwise
+       usually the returned from calling get_state() on the preceeding line of text
+
+    Returns 0 if there are no open items in the line
+    Otherwise, returns a non-zero state
+    """
+
+    template_depth = existing_state & 0xFF
+    in_nowiki  = existing_state & 0x100
+    in_comment = existing_state & 0x1000
+
+    separators = ("<!--", "-->", "<nowiki>", "</nowiki>", r"(?<!\\){{", "}}")
+    for item in re.findall("(" + "|".join(separators) + ")", line):
+        if in_comment:
+            if item == "-->":
+                in_comment = False
+            continue
+
+        # opening html comments can appear anywhere and take precedence (except inside <pre>?)
+        if item == "<!--":
+            in_comment = True
+            continue
+
+        if in_nowiki:
+            if item == "</nowiki>":
+                in_nowiki = False
+            continue
+
+        if item == "{{":
+            template_depth += 1
+
+        elif item == "}}" and template_depth:
+            template_depth -= 1
+
+        elif item == "<nowiki>":
+            in_nowiki = True
+
+    return template_depth + in_nowiki*0x100 + in_comment*0x1000
+
+def text_to_wikilines(text, return_state=False):
+    """ Split text into 'wikilines'
+    A wikiline may include line breaks inside templates or tags
+
+        this {{is| a}} <!-- single --> wikiline
+
+        this {{is
+        |also a single}} <!--
+         wikiline -->
+    """
+
+    wikilines = []
+
+    cur_wikiline = []
+    state = 0
+    for line in text.splitlines():
+        cur_wikiline.append(line)
+
+        state = get_state(line, state)
+        if state == 0:
+            wikilines.append("\n".join(cur_wikiline))
+            cur_wikiline = []
+
+    if cur_wikiline:
+        wikilines.append("\n".join(cur_wikiline))
+        cur_wikiline = []
+
+    if return_state:
+        return state, wikilines
+
+    return wikilines
+
+
 class SectionParser():
 
     def __init__(self, text, page_title, log=None):
@@ -25,10 +102,8 @@ class SectionParser():
         """
         self.title = page_title
         self.level = 1
+        self._state = 0
         self._log = log
-
-        self.has_nowiki = False
-        self.has_comment = False
 
         self._changes = []
         clean_text = text.replace('\u2029', "")
@@ -82,155 +157,89 @@ class SectionParser():
     def __str__(self):
         return self.header + "\n".join(list(map(str, self._children))).rstrip()
 
-    @property
-    def state(self):
-        state = 0
-        if self.in_comment:
-            state += 1
-        if self.template_depth:
-            state += 2
-        if self.in_nowiki:
-            state += 4
-        return state
-
-    def _update_state(self, line):
-        separators = ("<!--", "-->", "<nowiki>", "</nowiki>", r"(?<!\\){{", "}}")
-        for item in re.findall("(" + "|".join(separators) + ")", line):
-            if item == "<nowiki>":
-                self.has_nowiki = True
-            if item == "<!--":
-                self.has_comment = True
-
-            if self.in_comment:
-                if item == "-->":
-                    self.in_comment = False
-                continue
-
-            if self.in_nowiki:
-                if item == "</nowiki>":
-                    self.in_nowiki = False
-                continue
-
-            if item == "{{":
-                self.template_depth.append(line)
-
-            elif item == "}}" and self.template_depth:
-                self.template_depth.pop()
-
-            elif item == "<!--":
-                self.in_comment = True
-
-            elif item == "<nowiki>":
-                self.in_nowiki = True
-
-
     def parse(self, text):
-
-        # Parser states
-        self.in_comment = False
-        self.in_nowiki = False
-        self.template_depth = []
-
-        section = None
-        parent = None
-        header_comment = None
 
         header = []
         children = []
         changes = []
 
-        for line in text.splitlines():
-
-            line_state = self.state
-
-            # Update in_comment and template_depth
-            self._update_state(line)
-
-            m = re.match(r"^(==+)([^=]+)(==+)\s*(.*?)\s*$", line)
-
-            if line_state:
-                if not section:
-                    header.append(line)
-                else:
-                    section.add(line, line_state)
-
-                if m:
-                    if line_state & 1:
-                        self.log("open_html_comment", section, line)
-                    if line_state & 2:
-                        self.log("open_template", section, self.template_depth[-1] + " | " + line)
-                    if line_state & 4:
-                        self.log("open_nowiki", section, line)
-
-                continue
+        prev_section = None
+        self._state, wikilines = text_to_wikilines(text, return_state=True)
+        for wikiline in wikilines:
 
             # New section start
+            m = re.match(r"(==+)([^=]+)(==+)\s*(.*?)\s*$", wikiline)
             if m:
                 level = min(len(m.group(1)), len(m.group(3)))
                 lpad = (len(m.group(1))-level) * "="
                 rpad = (len(m.group(3))-level) * "="
-
-                if m.group(4):
-                    if re.match(r"^\<!--.*--\>$", m.group(4)):
-                        header_comment = m.group(4)
-                        self.log("comment_on_title", section, line)
-                    else:
-                        self.log("text_on_title", section, line)
+                header_text = m.group(4)
 
                 m = re.match(r"\s*(.*?)\s*(\d*)\s*$", m.group(2))
 
                 title = lpad + m.group(1) + rpad
                 count = m.group(2)
 
-                if not section:
+                if not prev_section:
                     parent = self
 
-                elif level > section.level:
-                    parent = section
+                elif level > prev_section.level:
+                    parent = prev_section
 
                 else:
-                    parent = section.parent
+                    parent = prev_section.parent
                     while parent and level <= parent.level:
                         parent = parent.parent
 
                 new_section = Section(parent, level, title, count)
+                if header_text:
+                    if re.match(r"^\<!--.*--\>$", header_text):
+                        self.log("comment_on_title", new_section, wikiline)
+                    else:
+                        self.log("text_on_title", new_section, wikiline)
+                    new_section.add(header_text)
 
-                if section:
-                    if level == 2 and any("----" in line for line in section._trailing_empty_lines):
+                if prev_section:
+                    if level == 2 and any("----" in line for line in prev_section._trailing_empty_lines):
                         changes.append("removed ---- L2 separator")
 
                     # Empty sections should have a single leading empty line
-                    elif not section._lines and not section._children and section._leading_empty_lines != [""]:
+                    elif not prev_section.content_wikilines and not prev_section._children and prev_section._leading_empty_lines != [""]:
                         changes.append("adjusted whitespace per WT:NORM")
 
                     # All other sections should end with a single blank line
-                    elif (section._lines or section._children) and section._trailing_empty_lines != [""]:
+                    elif (prev_section.content_wikilines or prev_section._children) and prev_section._trailing_empty_lines != [""]:
                         changes.append("adjusted whitespace per WT:NORM")
 
-                    changes += section._changes
+                    changes += prev_section._changes
 
                 if parent == self:
                     children.append(new_section)
                 else:
                     parent.add(new_section)
 
-                section = new_section
-                if header_comment:
-                    section.add(header_comment)
-                    header_comment = None
-
-                if new_section.header.strip() != line:
+                if new_section.header.rstrip() != wikiline:
                     changes.append("adjusted whitespace per WT:NORM")
 
+                prev_section = new_section
                 continue
 
-            if not section:
-                header.append(line)
-            else:
-                section.add(line)
+            # Check for section headers inside comments or templates
+#            if re.search(r"(^|\n)(==+)([^=]+)(==+)", wikiline):
+#                if line_state & 1:
+#                    self.log("open_html_comment", section, line)
+#                if line_state & 2:
+#                    self.log("open_template", section, self.template_depth[-1] + " | " + line)
+#                if line_state & 4:
+#                    self.log("open_nowiki", section, line)
 
-        if section:
-            changes += section._changes
+            if not prev_section:
+                header.append(wikiline)
+            else:
+                prev_section.add(wikiline)
+
+        if prev_section:
+            changes += prev_section._changes
 
         return header, children, changes
 
@@ -254,7 +263,7 @@ class Section():
         self.title = title
         self.count = count
 
-        self._lines = []
+        self.content_wikilines = []
         self._leading_empty_lines = []
         self._trailing_empty_lines = []
         self._children = []
@@ -336,10 +345,10 @@ class Section():
             # If the line is inside a template or html comment, just add it
             # without checking if it's a category or a topline
             if state:
-                self._lines.append(item)
+                self.content_wikilines.append(item)
 
             elif re.match(r"^(----+)?\s*$", item):
-                if not self._lines:
+                if not self.content_wikilines:
                     # Ignore empty lines before first data item
                     self._leading_empty_lines.append(item)
                 else:
@@ -363,17 +372,17 @@ class Section():
                 self._add_category(item)
 
 #            elif self.is_topline(item):
-#                if self._lines or self._topmost != self:
+#                if self.content_wikilines or self._topmost != self:
 #                    template = re.search(r"\{\{([^|}]*)", item).group(1)
 #                    self._changes.append(f"/*{self._topmost.path}*/ moved {template} template to top")
 #                self._add_topline(item)
 
             else:
                 if self._trailing_empty_lines:
-                    self._lines += self._trailing_empty_lines
+                    self.content_wikilines += self._trailing_empty_lines
                     self._trailing_empty_lines = []
 
-                self._lines.append(item)
+                self.content_wikilines.append(item)
 
                 # If any section before the final section contains a category, it will
                 # be moved to the bottom
@@ -418,11 +427,11 @@ class Section():
         return "\n".join(self._toplines) + "\n"
 
     @property
-    def lines(self):
-        if not self._lines:
+    def content_text(self):
+        if not self.content_wikilines:
             return ""
 
-        return "\n".join(self._lines) + "\n"
+        return "\n".join(self.content_wikilines) + "\n"
 
     @property
     def ancestors(self):
@@ -462,4 +471,4 @@ class Section():
         return list(self.ifilter_sections(*args, **kwargs))
 
     def __str__(self):
-        return self.header + self.toplines + self.lines + "".join(list(map(str, self._children))) + self.categories
+        return self.header + self.toplines + self.content_text + "".join(list(map(str, self._children))) + self.categories
