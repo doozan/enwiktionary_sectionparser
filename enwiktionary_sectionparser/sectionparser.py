@@ -94,7 +94,7 @@ class SectionParser():
         return state
 
     def _update_state(self, line):
-        separators = ("<!--", "-->", "<nowiki>", "</nowiki>", "^{{[^|}]*", r"[^\\]{{[^|}]*", "}}")
+        separators = ("<!--", "-->", "<nowiki>", "</nowiki>", r"(?<!\\){{", "}}")
         for item in re.findall("(" + "|".join(separators) + ")", line):
             if item == "<nowiki>":
                 self.has_nowiki = True
@@ -111,8 +111,8 @@ class SectionParser():
                     self.in_nowiki = False
                 continue
 
-            if item.startswith("{{") or item[1:3] == "{{":
-                self.template_depth.append(line) #item)
+            if item == "{{":
+                self.template_depth.append(line)
 
             elif item == "}}" and self.template_depth:
                 self.template_depth.pop()
