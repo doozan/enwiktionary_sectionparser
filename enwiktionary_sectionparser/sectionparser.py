@@ -124,6 +124,10 @@ class SectionParser():
         return
 
     @property
+    def page(self):
+        return self.title
+
+    @property
     def changelog(self):
         summary = []
         seen = set()
@@ -454,6 +458,11 @@ class Section():
     def path(self):
         lineage = list(self.lineage)
         return ":".join(reversed(lineage[:-1]))
+
+    @property
+    def page(self):
+        lineage = list(self.lineage)
+        return lineage[-1]
 
     def ifilter_sections(self, recursive=True, matches=lambda x: True):
 
