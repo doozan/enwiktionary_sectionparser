@@ -1,8 +1,8 @@
 import pytest
 import enwiktionary_sectionparser as enwiktparser
-from enwiktionary_sectionparser.sectionparser import SectionParser, Section, text_to_wikilines
+from enwiktionary_sectionparser.sectionparser import SectionParser, Section, wiki_splitlines
 
-def test_text_to_wikilines():
+def test_wiki_splitlines():
 
     text = """\
 {{template}}
@@ -22,7 +22,7 @@ template}} {{t
         '{{template|\ntemplate}} {{t\n|template}}'
     ]
 
-    res = text_to_wikilines(text)
+    res = list(wiki_splitlines(text))
     print(res)
     assert res == expected
 

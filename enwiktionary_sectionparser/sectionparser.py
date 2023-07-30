@@ -15,24 +15,38 @@
 
 import re
 
+_separators = (
+    "<!--", "-->",
+    r"<\s*nowiki\s*>", r"<\s*/\s*nowiki\s*>",
+    r"(?<!\\){{", "}}",
+    r"\n"
+)
+_pattern = "(" + "|".join(_separators) + ")"
+_regex = re.compile(_pattern)
 
-def get_state(line, existing_state):
+def wiki_splitlines(text, return_state=False):
     """
-    line: a line of text that may include "opening" and "closing" tags
-    existing state: state at beginning of line
-       0 if this is the first line parsed, otherwise
-       usually the returned from calling get_state() on the preceeding line of text
+    Like str.splitlines(), but doesn't split on newlines inside
+    html comments, <nowiki> tags and {{ templates }}
 
-    Returns 0 if there are no open items in the line
-    Otherwise, returns a non-zero state
+    if return_state is True,
+        the last value returned contains information about unclosed items
     """
 
-    template_depth = existing_state & 0xFF
-    in_nowiki  = existing_state & 0x100
-    in_comment = existing_state & 0x1000
+    # TODO: Handle <ref> tags? other html tags? <pre> is not commonly used in mainspace
 
-    separators = ("<!--", "-->", "<nowiki>", "</nowiki>", r"(?<!\\){{", "}}")
-    for item in re.findall("(" + "|".join(separators) + ")", line):
+    template_depth = 0
+    in_nowiki  = False
+    in_comment = False
+
+    prev_pos = 0
+    for m in re.finditer(_regex, text):
+        item = m.group(0)
+
+        # remove all spaces to normalize "< / nowiki >" to "<nowiki>"
+        # Possibly a footgun if trying to adapt this to split on something containing " " instead of "\n"
+        item = item.replace(" ", "")
+
         if in_comment:
             if item == "-->":
                 in_comment = False
@@ -57,40 +71,23 @@ def get_state(line, existing_state):
         elif item == "<nowiki>":
             in_nowiki = True
 
-    return template_depth + in_nowiki*0x100 + in_comment*0x1000
+        elif item == "\n" and not template_depth:
+            yield text[prev_pos:m.end()-len("\n")]
+            prev_pos = m.end()
 
-def text_to_wikilines(text, return_state=False):
-    """ Split text into 'wikilines'
-    A wikiline may include line breaks inside templates or tags
-
-        this {{is| a}} <!-- single --> wikiline
-
-        this {{is
-        |also a single}} <!--
-         wikiline -->
-    """
-
-    wikilines = []
-
-    cur_wikiline = []
-    state = 0
-    for line in text.splitlines():
-        cur_wikiline.append(line)
-
-        state = get_state(line, state)
-        if state == 0:
-            wikilines.append("\n".join(cur_wikiline))
-            cur_wikiline = []
-
-    if cur_wikiline:
-        wikilines.append("\n".join(cur_wikiline))
-        cur_wikiline = []
+    if prev_pos != len(text):
+        if text.endswith("\n") and prev_pos != len(text)-len("\n"):
+            yield text[prev_pos:-1*len("\n")]
+        else:
+            yield text[prev_pos:]
 
     if return_state:
-        return state, wikilines
-
-    return wikilines
-
+        state = template_depth & 0x00FF
+        if in_nowiki:
+            state &= 0x100
+        if in_comment:
+            state &= 0x200
+        yield state
 
 class SectionParser():
 
@@ -110,7 +107,7 @@ class SectionParser():
         if clean_text != text:
             self._changes.append("removed unicode paragraph separator")
 
-        self._header, self._children, changes = self.parse(clean_text)
+        self.content_wikilines, self._children, changes = self.parse(clean_text)
         self._changes += changes
 
 
@@ -154,8 +151,8 @@ class SectionParser():
 
     @property
     def header(self):
-        if self._header:
-            return "\n".join(self._header) + "\n"
+        if self.content_wikilines:
+            return "\n".join(self.content_wikilines) + "\n"
         return ""
 
     def __str__(self):
@@ -168,7 +165,11 @@ class SectionParser():
         changes = []
 
         prev_section = None
-        self._state, wikilines = text_to_wikilines(text, return_state=True)
+
+        wikilines = list(wiki_splitlines(text, return_state=True))
+        self.state = wikilines.pop()
+
+        wikiline = None
         for wikiline in wikilines:
 
             # New section start
