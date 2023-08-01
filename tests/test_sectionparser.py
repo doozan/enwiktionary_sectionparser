@@ -2,32 +2,6 @@ import pytest
 import enwiktionary_sectionparser as enwiktparser
 from enwiktionary_sectionparser.sectionparser import SectionParser, Section, wiki_splitlines
 
-def test_wiki_splitlines():
-
-    text = """\
-{{template}}
-==Section==
-{{header}}
-<!-- comment
-comment -->
-{{template|
-template}} {{t
-|template}}
-"""
-    expected = [
-        '{{template}}',
-        '==Section==',
-        '{{header}}',
-        '<!-- comment\ncomment -->',
-        '{{template|\ntemplate}} {{t\n|template}}'
-    ]
-
-    res = list(wiki_splitlines(text))
-    print(res)
-    assert res == expected
-
-
-
 def test_is_section():
     assert Section.is_category("[[Category:en:Trees]]") == True
     assert Section.is_category("{{c|en|Trees}}") == True

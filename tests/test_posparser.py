@@ -6,7 +6,9 @@ def test_basic():
 ===Noun===
 {{en-noun}}
 
-# sense1
+# sense1<ref>
+blah blah
+</ref>
 #: {{ux|en|there's a '''sense1''' in here}}
 # sense2
 #: {{syn|es|foo|bar}}
