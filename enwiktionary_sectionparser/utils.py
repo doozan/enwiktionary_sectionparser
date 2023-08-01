@@ -18,6 +18,7 @@ import re
 _separators = (
     "<!--", "-->",
     r"<\s*nowiki\s*>", r"<\s*/\s*nowiki\s*>",
+    r"<\s*ref\s*>", r"<\s*/\s*ref\s*>",
     r"(?<!\\){{", "}}",
     r"\n"
 )
@@ -33,11 +34,10 @@ def wiki_splitlines(text, return_state=False):
         the last value returned contains information about unclosed items
     """
 
-    # TODO: Handle <ref> tags? other html tags? <pre> is not commonly used in mainspace
-
     template_depth = 0
-    in_nowiki  = False
     in_comment = False
+    in_nowiki  = False
+    in_ref = False
 
     prev_pos = 0
     for m in re.finditer(_regex, text):
@@ -71,7 +71,16 @@ def wiki_splitlines(text, return_state=False):
         elif item == "<nowiki>":
             in_nowiki = True
 
-        elif item == "\n" and not template_depth:
+        elif item == "<ref>":
+            in_ref = True
+
+        elif item == "</ref>":
+            in_ref = False
+
+        if in_comment or in_nowiki or in_ref or template_depth:
+            continue
+
+        if item == "\n":
             yield text[prev_pos:m.end()-len("\n")]
             prev_pos = m.end()
 
@@ -82,10 +91,12 @@ def wiki_splitlines(text, return_state=False):
             yield text[prev_pos:]
 
     if return_state:
-        state = template_depth & 0x00FF
-        if in_nowiki:
+        state = min(0xFF, template_depth) & 0xFF
+        if in_ref:
             state &= 0x100
-        if in_comment:
+        if in_nowiki:
             state &= 0x200
+        if in_comment:
+            state &= 0x400
         yield state
 
