@@ -94,7 +94,7 @@ class SectionParser():
         prev_section = None
 
         wikilines = list(wiki_splitlines(text, return_state=True))
-        self.state = wikilines.pop()
+        self._state = wikilines.pop()
 
         wikiline = None
         for wikiline in wikilines:

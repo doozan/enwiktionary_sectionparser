@@ -1,5 +1,5 @@
 import pytest
-import enwiktionary_sectionparser as enwiktparser
+import enwiktionary_sectionparser as sectionparser
 from enwiktionary_sectionparser.sectionparser import SectionParser, Section, wiki_splitlines
 
 def test_is_section():
@@ -229,7 +229,7 @@ def test_general():
 """
     page_title = "test"
 
-    entry = enwiktparser.parse(page_text, page_title)
+    entry = sectionparser.parse(page_text, page_title)
     assert len(entry.filter_sections()) == 11
     assert len(entry.filter_sections(recursive=False)) == 2
     assert len(entry.filter_sections(matches="Etymology")) == 2
@@ -309,3 +309,32 @@ def test_general():
 
 ===Noun===\
 """
+
+
+def test_state():
+
+    text = """\
+==English==
+{{wikipedia}}
+
+===Etymology===
+From {{bor|en|hi|भटूरा}} or {{bor|en|pa|ਭਟੂਰਾ}}.
+
+===Noun===
+{{en-noun|~}}
+
+# A [[fluffy]] [[deep-fried]] [[leavened]] [[bread]] from the [[Indian subcontinent]].
+
+====Alternative forms====
+* {{alter|en|batoora|batura|bhatura|pathora}} <!-- is this supposed to be 'parotha', instead of 'pathora'?>
+
+[[Category:en:Breads]]
+"""
+
+    wikt = sectionparser.parse(text, "test")
+    assert wikt == None
+
+    log = []
+    wikt = sectionparser.parse(text, "test", log)
+    assert wikt != None
+    assert wikt._state != 0

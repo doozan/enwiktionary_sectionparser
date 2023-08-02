@@ -23,7 +23,7 @@ _separators = (
     r"\n"
 )
 _pattern = "(" + "|".join(_separators) + ")"
-_regex = re.compile(_pattern)
+_regex = re.compile(_pattern, re.IGNORECASE)
 
 def wiki_splitlines(text, return_state=False):
     """
@@ -43,9 +43,9 @@ def wiki_splitlines(text, return_state=False):
     for m in re.finditer(_regex, text):
         item = m.group(0)
 
-        # remove all spaces to normalize "< / nowiki >" to "<nowiki>"
-        # Possibly a footgun if trying to adapt this to split on something containing " " instead of "\n"
-        item = item.replace(" ", "")
+        # normalize tags for easier matching below
+        if item.startswith("<") and item.endswith(">"):
+            item = item.replace(" ", "").lower()
 
         if in_comment:
             if item == "-->":
@@ -93,10 +93,10 @@ def wiki_splitlines(text, return_state=False):
     if return_state:
         state = min(0xFF, template_depth) & 0xFF
         if in_ref:
-            state &= 0x100
+            state |= 0x100
         if in_nowiki:
-            state &= 0x200
+            state |= 0x200
         if in_comment:
-            state &= 0x400
+            state |= 0x400
         yield state
 
