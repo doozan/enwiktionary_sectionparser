@@ -14,6 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import mwparserfromhell as mwparser
+
 
 class PosParser():
 
@@ -35,15 +37,22 @@ class PosParser():
         "alti": [   "alti", "inline alt forms", ],
         "co": [ "co", "coi", "collocation", "zh-co", ],
         "cot": [ "cot", "coord", "coordinate terms", "coord-lite", ],
-        "ux": [ "ux", "usex", "uxi", "ux-lite", "prefex", "prefixusex", "afex", "sufex", "suffixusex", "afex", "affixusex", "rfex", "rfquotek"] + \
-              sum([[k + "-x", k + "-x-inline", k + "-usex", k + "-usex-inline"] for k in ["ja", "hi", "ko", "th", "ur", "zh", "km", "ne"]], []),
+        "ux": [ "ux", "usex", "uxi", "ux-lite", "prefex", "prefixusex", "afex", "sufex", "suffixusex", "afex", "affixusex" ] \
+            + sum([[k + "-x", k + "-x-inline", k + "-usex", k + "-usex-inline"] for k in ["ja", "hi", "ko", "th", "ur", "zh", "km", "ne"]], []),
         "quote": [ "Q", "quote", "quotei", "quote-book", "quote-web", "quote-text", "quote-journal", "quote-av",
             "quote-song", "quote-video game", "quote-newsgroup", "quote-news", "quote-book-ur", "quote-hansard",
             "quote-lite", "quote-mailing list", "quote-us-patent", "quote-wikipedia",
             "grc-cite",
-            "seeCites", "seemoreCites", "seeMoreCites", "rfquote", "rfquote-sense", ],
-        "sense": [ "lb", "lb-lite", "senseid", "defdate", "rfc-sense", "n-g", "q", "qualifier", "gloss", "ng" ]
+            "seeCites", "seemoreCites", "seeMoreCites" ],
+
+        # These aren't UX, but are better served when formatted as #: so they're not hidden by default
+        "rfquote": [ "rfquote", "rfquote-sense", "rfquotek", "rfex" ],
+
+        "sense": [ "lb", "lb-lite", "senseid", "defdate", "rfc-sense", "n-g", "q", "qualifier", "gloss", "ng",
+            "non-gloss definition", "place", "taxon" ],
     }
+
+    ALL_NYMS = [ "syn", "ant", "hyper", "hypo", "holo", "merq", "tropo", "comero", "cot", "parasyn", "perfect", "imperfect", "active", "midvoice", "alti" ]
 
     all_templates = []
     template_to_type = {}
@@ -59,35 +68,18 @@ class PosParser():
     #print(TYPE_PATTERN)
     #exit()
 
-    quote_pattern = r"""(?x)
-        \s*
-        (
-            ('''\s*)?                           # optional bold
-                {{\s*
-                (c\.|circa|circa2|a\.|ante|post|rfdate|rfdatek)    # date templates
-                \s*\|
-            |
-            ((circa|early|late|mid|ca[.]?|c[.]?|a[.]?)?)?\s*          # optional date qualifier
-            '''\s*                              # bold
-                ((circa|early|late|mid|ca[.]?|c[.]?|a[.]?)?)?\s*          # optional date qualifier
-                (
-                    \d{1,2}(st|nd|rd|th)            # 1st-99th
-                    |
-                    (1\d|20)\d{2}                   # year 1000-2099
-                )
-        )
-    """
-    QUOTE_RX = re.compile(quote_pattern)
-
-
     def __init__(self, section, log=None):
         """
         section = enwiktionary_sectionparser.Section
         log = list to append log messages
         """
         self._log = log
+        self._changes = []
 
-        self.headlines, self.senses, self.footlines, self._changes = self.parse(section)
+        self.headlines, self.senses, self.footlines = self.parse(section)
+        if self.headlines and self.senses and all(l.strip() for l in self.headlines):
+            self.headlines.append("")
+            self._changes.append("adjusted whitespace")
 
 
     def log(self, error, section, line):
@@ -110,11 +102,6 @@ class PosParser():
 
     def parse(self, section):
 
-        changes = []
-        header = []
-        footer = []
-        senses = []
-
         wikilines = section.content_wikilines
 
         first_sense = 0
@@ -122,20 +109,20 @@ class PosParser():
             first_sense += 1
 
         if first_sense == len(wikilines):
-            return wikilines, [], [], changes
+            return wikilines, [], []
 
         last_sense = len(wikilines)-1
-        while last_sense > first_sense and (not wikilines[last_sense] or wikilines[last_sense][0] not in "*#:"):
+        while last_sense > first_sense and (not wikilines[last_sense].strip() or wikilines[last_sense][0] not in "*#:"):
             last_sense -= 1
 
         sense_list = self.parse_list(wikilines[first_sense:last_sense+1], section)
         if not sense_list:
             # TODO Better error handling here
-            return wikilines, [], [], changes
+            return wikilines, [], []
 
         self.set_item_types(sense_list)
 
-        return wikilines[:first_sense], sense_list, wikilines[last_sense+1:], changes
+        return wikilines[:first_sense], sense_list, wikilines[last_sense+1:]
 
 
     def parse_list(self, all_items, section):
@@ -147,7 +134,7 @@ class PosParser():
 
         for data in all_items:
             if data == "":
-                self.log("removed_newline", "", "")
+                self._changes.append("removed_newline in list")
 
             m = re.match(f'[#:*]+', data)
             if not m:
@@ -180,12 +167,12 @@ class PosParser():
             old_len = len(data)
             data = re.sub(r'^[#*:]+\s*', '', data)
             if len(data) + len(prefix) + 1 != old_len:
-                self.log("whitespace", name, data)
+                self._changes.append("cleanup whitespace")
 
             old_len = len(data)
             data = data.rstrip()
             if len(data) != old_len:
-                self.log("whitespace", name, data)
+                self._changes.append("cleanup whitespace")
 
             item = ListItem(parent, prefix, data, name)
             if parent:
@@ -202,28 +189,185 @@ class PosParser():
         for item in items:
             m = re.search(self.re_templates, item.data)
             if m:
-                item._type = self.template_to_type[m.group('t')]
+                template_type = self.template_to_type[m.group('t')]
+
+                # Strip html comments before checking that text is a single template
+                text = strip_html_comments(item.data)
+                text = strip_ref_tags(text)
+                if template_type != "sense" and not is_template(m.group('t'), text):
+                    #print("NOT TEMPLATE", [m.group('t'), item.data])
+                    item._type = "unknown"
+
+                # "zh-x" may be a quote or a ux, depending on the existence of a "ref=" parameter
+                elif m.group("t") == "zh-x" and re.search(r"\|\s*ref\s*=", item.data):
+                    item._type = "quote"
+
+                else:
+                    item._type = template_type
 
             else:
                 # RQ: templates are quotes
                 if re.match(r"\s*{{\s*(R|RQ):", item.data):
                     item._type = "quote"
 
-                # if starts with a bold year, probably a quote
-                elif re.match(self.QUOTE_RX, item.data):
+                elif is_bare_quote(item):
                     item._type = "bare_quote"
 
-                # check this after bare quotes, which may also start ''' and end ''
-                # lines starting and ending with italics are probably bare ux lines
-                elif item.data.startswith("''") and item.data.endswith("''") and not \
-                        (item.data.startswith("'''") and not item.data.startswith("'''")):
+                elif is_bare_ux(item):
                     item._type = "bare_ux"
 
                 else:
                     item._type = "unknown"
 
+
+        # Special handling for top level senses and
+        # "sense" parents, "senses" whose children are all subsenses
+        if items and (not items[0].parent or items[0].parent._type == "sense") \
+                 and all(i._type in ["sense", "unknown"] for i in items) \
+                 and all("[[" in i.data and "]]" in i.data for i in items if i._type == "unknown"):
+            for i in items:
+                i._type = "sense"
+
+        for item in items:
             if item._children:
                 self.set_item_types(item._children)
+
+
+
+    def __str__(self):
+        return "\n".join(map(str, self.headlines + self.senses + self.footlines))
+
+
+def strip_html_comments(text):
+    return re.sub(r"\s*<!--.*?-->", "", text, flags=re.DOTALL)
+
+def strip_ref_tags(text):
+    return re.sub(r"(<\s*ref[^<>/]*>.*?<\s*/\s*ref\s>|<\s*ref[^<>/]*/\s*>)", "", text, flags=re.DOTALL)
+
+def is_template(template, text):
+    """ Returns True if text contains only {{template_name|...}} """
+
+    m = re.match(r"\{\{\s*" + template + r"\s*(?=[|}]).*}}$", text, flags=re.DOTALL)
+    if not m or m.group(0) != text:
+        return False
+
+    wiki = mwparser.parse(text)
+    t = next(wiki.ifilter_templates())
+    return str(t) == str(text)
+
+def has_link(text):
+    return bool(re.search(r"(\[\[[^\[\]]+\]\]|{{\s*(l|m)\s*\|)", text))
+
+def is_sentence(text):
+    return bool(re.match(r"""^\W*[A-Z].*[.?!]["'\W]*$""", text))
+
+def is_italic(text):
+    # Returns True if entire string is enclosed in '' italic wikimarkup
+    ital = "(?<!')(?:'{2}|'{5})(?!')"
+    return re.match(fr"{ital}.*{ital}$", text) and not re.search(ital, text[2:-2])
+
+def is_bold(text):
+    # Returns True if entire string is enclosed in ''' bold wikimarkup
+    bold = "(?<!')(?:'{3}|'{5})(?!')"
+    return re.match(fr"{bold}.*{bold}$", text) and not re.search(bold, text[3:-3])
+
+def is_bare_ux(item):
+
+    passage = str(item.data)
+    #print("is_bare_ux?", passage)
+
+    # Must be an italic string
+    if not is_italic(passage):
+        #print("not italic")
+        return False
+
+    # Must contain at least 1 bold item
+    if not passage.count("'''") > 1:
+        #print("no bold")
+        return False
+
+    # Should not contain links
+    if has_link(passage):
+        #print("has link")
+        return False
+
+    # TODO: English passages must be sentences
+
+    if not item._children:
+        #print("no children")
+        return True
+
+    # If it contains a child, should only have 1 child
+    if len(item._children) > 1:
+        #print("too many children")
+        return False
+
+    # TODO: English items should not have a translation
+
+    #print("scanning child", item._children[0])
+    return is_translation(item._children[0])
+
+
+def is_translation(item):
+
+    translation = str(item.data)
+
+    # Must start with a capital and end with punctuation
+    if not is_sentence(translation):
+        #print("not a sentence")
+        return False
+
+    # Must contain at least 1 bold item
+    if not translation.count("'''") > 1:
+        #print("no bold")
+        return False
+
+    # Translation should not have a child (TODO: Not necessarily true, may contain transliteration)
+    if item._children:
+        #print("has children")
+        return False
+
+    return True
+
+
+
+# This is used in a re.findall, so everything should be non-capturing
+_quote_start = r"""
+        (?:
+            (?:'''\s*)?                                              # optional bold
+                {{\s*
+                (?:c\.|circa|circa2|a\.|ante|post|rfdate|rfdatek)    # date templates
+                \s*\|
+            |
+            (?:(?:circa|early|late|mid|ca[.]?|c[.]?|a[.]?)?)?\s*       # optional date qualifier
+            '''\s*                                                 # bold
+                (?:(?:circa|early|late|mid|ca[.]?|c[.]?|a[.]?)?)?\s*   # optional date qualifier
+                (?:
+                    \d{1,2}(?:st|nd|rd|th)                           # 1st-99th
+                    |
+                    (?:1\d|20)\d{2}                                  # year 1000-2099
+                )
+        )
+    """
+_quote_start_pattern = fr"(?x)\s*{_quote_start}"
+_quote_line_pattern = fr"""(?x)
+    ^
+    (?P<prefix>
+        [#:*]+
+    )
+    +\s*
+    (?P<quote>
+        {_quote_start}
+        .*
+    )
+    $
+"""
+
+BARE_QUOTE_START_RX = re.compile(_quote_start_pattern)
+BARE_QUOTE_LINE_RX = re.compile(_quote_line_pattern, re.MULTILINE)
+
+def is_bare_quote(item):
+    return bool(re.match(BARE_QUOTE_START_RX, item.data))
 
 class ListItem():
     def __init__(self, parent, prefix, data, name):
