@@ -48,7 +48,7 @@ class PosParser():
         # These aren't UX, but are better served when formatted as #: so they're not hidden by default
         "rfquote": [ "rfquote", "rfquote-sense", "rfquotek", "rfex" ],
 
-        "sense": [ "lb", "lb-lite", "senseid", "defdate", "rfc-sense", "n-g", "q", "qualifier", "gloss", "ng",
+        "sense": [ "lb", "lb-lite", "senseid", "defdate", "rfc-sense", "n-g", "q", "qual", "qualifier", "gloss", "ng",
             "non-gloss definition", "place", "taxon" ],
     }
 
