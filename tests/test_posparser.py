@@ -95,3 +95,22 @@ def test_strip_ref_tags():
     assert strip_ref_tags('{{template}}< ref name="blah" >test< / ref >') == "{{template}}"
     assert strip_ref_tags('{{template}}< ref name="blah" />') == "{{template}}"
 
+
+def test_basic():
+    text = """\
+===Adjective===
+{{en-adj}}
+
+# sense 1
+
+# sense 2
+"""
+
+    wikt = parser.parse(text, "test")
+    section = wikt.filter_sections(matches="Adjective")[0]
+    pos = parser.parse_pos(section)
+
+    assert len(pos.senses) == 2
+
+
+

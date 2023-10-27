@@ -108,9 +108,6 @@ class PosParser():
         while first_sense<len(wikilines) and (not wikilines[first_sense] or wikilines[first_sense][0] not in "*#:"):
             first_sense += 1
 
-        if first_sense == len(wikilines):
-            return wikilines, [], []
-
         last_sense = len(wikilines)-1
         while last_sense > first_sense and (not wikilines[last_sense].strip() or wikilines[last_sense][0] not in "*#:"):
             last_sense -= 1
@@ -126,19 +123,18 @@ class PosParser():
 
 
     def parse_list(self, all_items, section):
-
         list_items = []
 
         prev_item = None
         prev_level = None
 
         for data in all_items:
-            if data == "":
-                self._changes.append("removed_newline in list")
+            if not data.strip():
+                self._changes.append("removed newline in list")
+                continue
 
             m = re.match(f'[#:*]+', data)
             if not m:
-                #self.warn("non_list_item", section, data)
 #                print("FAILED processing list, found non_list_item", section.path, data)
                 return
 
