@@ -185,6 +185,16 @@ ending }}
 }}{{ux|en|2
 }}{{ux|en|3
 }}
+#*: named ref <ref name="Cuvier1840">foo
+bar</ref>
+# closed ref <ref name=SOED/>
+#: math < math  >foo
+bar< /math >
+{|
+|-
+|foo || bar || baz
+|-
+|}
 # {{trailing unclosed
 """
     expected = [
@@ -194,11 +204,16 @@ ending }}
         '# ignore open template inside html comment <!--\n# {{commented|open|template\n-->',
         '# ignore closing template inside comment {{template|\nblah <!-- }} -->\nending }}',
         '#: multiple multiline_templates {{ux|en|1\n}}{{ux|en|2\n}}{{ux|en|3\n}}',
+        '#*: named ref <ref name="Cuvier1840">foo\nbar</ref>',
+        '# closed ref <ref name=SOED/>',
+        '#: math < math  >foo\nbar< /math >',
+        '{|\n|-\n|foo || bar || baz\n|-\n|}',
         '# {{trailing unclosed'
     ]
 
     parsed = SectionParser(text, "test")
     section = parsed.filter_sections(matches="Noun")[0]
+    print(section.content_wikilines)
     assert section.content_wikilines == expected
 
 

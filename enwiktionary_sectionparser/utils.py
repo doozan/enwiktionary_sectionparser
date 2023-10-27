@@ -18,8 +18,10 @@ import re
 _separators = (
     "<!--", "-->",
     r"<\s*nowiki\s*>", r"<\s*/\s*nowiki\s*>",
-    r"<\s*ref\s*>", r"<\s*/\s*ref\s*>",
+    r"<\s*ref[^/]*?>", r"<\s*/\s*ref\s*>",
+    r"<\s*math\s*>", r"<\s*/\s*math\s*>",
     r"(?<!\\){{", "}}",
+    r"(?<!{){\|", r"\|}",
     r"\n"
 )
 _pattern = "(" + "|".join(_separators) + ")"
@@ -38,6 +40,8 @@ def wiki_splitlines(text, return_state=False):
     in_comment = False
     in_nowiki  = False
     in_ref = False
+    in_math = False
+    in_table = False
 
     prev_pos = 0
     for m in re.finditer(_regex, text):
@@ -62,6 +66,12 @@ def wiki_splitlines(text, return_state=False):
                 in_nowiki = False
             continue
 
+        if item == "{|":
+            in_table = True
+
+        if item == "|}":
+            in_table = False
+
         if item == "{{":
             template_depth += 1
 
@@ -71,13 +81,19 @@ def wiki_splitlines(text, return_state=False):
         elif item == "<nowiki>":
             in_nowiki = True
 
-        elif item == "<ref>":
+        elif item.startswith("<ref"):
             in_ref = True
 
         elif item == "</ref>":
             in_ref = False
 
-        if in_comment or in_nowiki or in_ref or template_depth:
+        elif item.startswith("<math"):
+            in_math = True
+
+        elif item == "</math>":
+            in_math = False
+
+        if in_comment or in_nowiki or in_ref or in_math or in_table or template_depth:
             continue
 
         if item == "\n":
@@ -93,10 +109,14 @@ def wiki_splitlines(text, return_state=False):
     if return_state:
         state = min(0xFF, template_depth) & 0xFF
         if in_ref:
-            state |= 0x100
+            state |= 0x0100
         if in_nowiki:
-            state |= 0x200
+            state |= 0x0200
         if in_comment:
-            state |= 0x400
+            state |= 0x0400
+        if in_math:
+            state |= 0x0800
+        if in_table:
+            state |= 0x1000
         yield state
 
