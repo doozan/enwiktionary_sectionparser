@@ -238,7 +238,7 @@ def strip_html_comments(text):
     return re.sub(r"\s*<!--.*?-->", "", text, flags=re.DOTALL)
 
 def strip_ref_tags(text):
-    return re.sub(r"(<\s*ref[^<>/]*>.*?<\s*/\s*ref\s>|<\s*ref[^<>/]*/\s*>)", "", text, flags=re.DOTALL)
+    return re.sub(r"(<\s*ref[^<>/]*>.*?<\s*/\s*ref\s*>|<\s*ref[^<>/]*/\s*>)", "", text, flags=re.DOTALL)
 
 def is_template(template, text):
     """ Returns True if text contains only {{template_name|...}} """
