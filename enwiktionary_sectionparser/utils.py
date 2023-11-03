@@ -18,10 +18,10 @@ import re
 _separators = (
     "<!--", "-->",
     r"<\s*nowiki\s*>", r"<\s*/\s*nowiki\s*>",
-    r"<\s*ref[^/]*?>", r"<\s*/\s*ref\s*>",
+    r"<\s*ref(\s+[^/]*)?>", r"<\s*/\s*ref\s*>",
     r"<\s*math\s*>", r"<\s*/\s*math\s*>",
     r"(?<!\\){{", "}}",
-    r"(?<!{){\|", r"\|}",
+    r"(?<![\\{]){\|", r"\|}(?!})",
     r"\n"
 )
 _pattern = "(" + "|".join(_separators) + ")"
@@ -66,10 +66,10 @@ def wiki_splitlines(text, return_state=False):
                 in_nowiki = False
             continue
 
-        if item == "{|":
+        if item == "{|" and not in_math:
             in_table = True
 
-        if item == "|}":
+        if item == "|}" and not in_math:
             in_table = False
 
         if item == "{{":

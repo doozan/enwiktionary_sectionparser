@@ -37,7 +37,7 @@ def test_item_types():
 ##: {{ux|en|there's a '''subsense''' in here}}
 # [[sense2]]
 #* {{quote-book|lang=en|year=1822|title=foo}}
-#: {{syn|es|foo|bar}}
+#: {{syn|es|foo|bar}}<ref>test</ref>
 #: ''Jeg skal nok få '''tatt knekken på''' ham til slutt.''
 # {{lb|eu|du}} to [[do]]
 ## to [[do]], [[make]], [[create]], [[produce]]
@@ -92,8 +92,12 @@ def test_is_template():
 
 def test_strip_ref_tags():
 
+    assert strip_ref_tags('{{template}}<ref>test</ref>') == "{{template}}"
     assert strip_ref_tags('{{template}}< ref name="blah" >test< / ref >') == "{{template}}"
     assert strip_ref_tags('{{template}}< ref name="blah" />') == "{{template}}"
+
+    assert strip_ref_tags('{{syn|tl|nakawin}} <ref>{{cite-web|tl|url=https://www.sunstar.com.ph/article/360265/genoguin-p-noy-mag-minarcos|title=Genoguin: P-Noy mag-Minarcos?|date=2014-08-10|accessdate=2023-01-15|work=SUNSTAR}}</ref><ref>{{cite-song|tl|url=https://www.soundcloud.com/itsunehonoka/minarcos|title=Minarcos Mo ang Aking Puso (song)|date=2022-05-07}}</ref><ref>{{cite-web|tl|url=https://issuu.com/dochokage/docs/_lcfilia_lasalitaan_e-poster_1_|title=MINARCOS POSTER by Paul Anfrei De Sagun - Issuu|accessdate=2023-01-15|work=issuu.com}}</ref>') == "{{syn|tl|nakawin}} "
+
 
 
 def test_basic():

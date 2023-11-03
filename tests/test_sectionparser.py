@@ -170,6 +170,7 @@ def test_content_wikilines():
 # multiline_template {{template|foo
 |bar}}
 # simple item
+* {{homophones|fr|livres|livrent|}}
 # multiline_comment and multiline_template <!--
 # commented line
 --> {{open_template|test=
@@ -185,6 +186,8 @@ ending }}
 }}{{ux|en|2
 }}{{ux|en|3
 }}
+<ref:{{R:it:DiPI}}>
+<references></references>
 #*: named ref <ref name="Cuvier1840">foo
 bar</ref>
 # closed ref <ref name=SOED/>
@@ -200,10 +203,13 @@ bar< /math >
     expected = [
         '# multiline_template {{template|foo\n|bar}}',
         '# simple item',
+        '* {{homophones|fr|livres|livrent|}}',
         '# multiline_comment and multiline_template <!--\n# commented line\n--> {{open_template|test=\ntemplate line\n}}',
         '# ignore open template inside html comment <!--\n# {{commented|open|template\n-->',
         '# ignore closing template inside comment {{template|\nblah <!-- }} -->\nending }}',
         '#: multiple multiline_templates {{ux|en|1\n}}{{ux|en|2\n}}{{ux|en|3\n}}',
+        '<ref:{{R:it:DiPI}}>',
+        '<references></references>',
         '#*: named ref <ref name="Cuvier1840">foo\nbar</ref>',
         '# closed ref <ref name=SOED/>',
         '#: math < math  >foo\nbar< /math >',

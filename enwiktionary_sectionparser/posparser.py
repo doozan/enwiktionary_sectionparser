@@ -190,6 +190,7 @@ class PosParser():
                 # Strip html comments before checking that text is a single template
                 text = strip_html_comments(item.data)
                 text = strip_ref_tags(text)
+                text = text.strip()
                 if template_type != "sense" and not is_template(m.group('t'), text):
                     #print("NOT TEMPLATE", [m.group('t'), item.data])
                     item._type = "unknown"
