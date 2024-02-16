@@ -1,6 +1,6 @@
 import pytest
 import enwiktionary_sectionparser as parser
-from enwiktionary_sectionparser.posparser import is_sentence, is_bare_ux, is_template, strip_ref_tags
+from enwiktionary_sectionparser.posparser import is_sentence, is_bare_ux, is_template, strip_ref_tags, is_bare_quote
 
 def test_basic():
     text = """\
@@ -115,6 +115,23 @@ def test_basic():
     pos = parser.parse_pos(section)
 
     assert len(pos.senses) == 2
+
+
+def test_is_bare_quote():
+
+    tests = [
+"'''1659''', {{w|Robert South}}, ''Interest Deposed, and Truth Restored''",
+"'''24 July, 1659''', {{w|Robert South}}, ''Interest Deposed, and Truth Restored''",
+"'''January 26 1751''', {{w|Samuel Johnson}}, ''The Rambler'' No. 90",
+"<!-- comment --> '''1659''', {{w|Robert South}}, ''Interest Deposed, and Truth Restored''",
+"'''November 2011''', test",
+ ]
+
+    from collections import namedtuple
+    Item = namedtuple('Item', ['data', 'children'])
+
+    for test in tests:
+        assert is_bare_quote(Item(test, None)) == True
 
 
 
