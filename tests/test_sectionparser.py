@@ -186,7 +186,7 @@ ending }}
 }}{{ux|en|2
 }}{{ux|en|3
 }}
-<ref:{{R:it:DiPI}}>
+{{it-pr|témpero,#tèmpero<ref:{{R:it:DiPI}}>}}
 <references></references>
 #*: named ref <ref name="Cuvier1840">foo
 bar</ref>
@@ -208,7 +208,7 @@ bar< /math >
         '# ignore open template inside html comment <!--\n# {{commented|open|template\n-->',
         '# ignore closing template inside comment {{template|\nblah <!-- }} -->\nending }}',
         '#: multiple multiline_templates {{ux|en|1\n}}{{ux|en|2\n}}{{ux|en|3\n}}',
-        '<ref:{{R:it:DiPI}}>',
+        '{{it-pr|témpero,#tèmpero<ref:{{R:it:DiPI}}>}}',
         '<references></references>',
         '#*: named ref <ref name="Cuvier1840">foo\nbar</ref>',
         '# closed ref <ref name=SOED/>',
@@ -357,5 +357,4 @@ From {{bor|en|hi|भटूरा}} or {{bor|en|pa|ਭਟੂਰਾ}}.
 
     log = []
     wikt = sectionparser.parse(text, "test", log)
-    assert wikt != None
-    assert wikt._state != 0
+    assert sorted(wikt._state.keys()) == ["open_comment"]
