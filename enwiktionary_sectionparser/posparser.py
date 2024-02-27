@@ -334,7 +334,7 @@ _quote_start = r"""
         (?:
             (?:'''\s*)?                                                # optional bold
                 {{\s*
-                (?:c\.|ca.|circa|circa2|a\.|ante|post|rfdate|rfdatek)  # date templates
+                (?:c\.|ca\.|circa|circa2|a\.|ante|post|rfdate|rfdatek)  # date templates
                 \s*\|
             |
             (?:(?:circa|early|late|mid|ca[.]?|c[.]?|a[.]?)?)?\s*       # optional date qualifier
@@ -345,8 +345,8 @@ _quote_start = r"""
                     |
                     (?:\d|1\d|20)\d{2}                                 # year 100-2099
                     |
-                    ((?:\d|[12]\d|30|31)\b\s*)?                        # 1-31
-                    (Jan(uary)?|Feb(ruary)?|Mar(rch)?|Apr(il)(e)?|May|Jun(e)?|Jul(y)?|Aug(ust)?|Sep(t)?(ember)?|Oct(ober)?|Nov(ember)?|Dec(ember)?)\b
+                    (?:(?:\d|[12]\d|30|31)\b\s*)?                        # 1-31
+                    (?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:rch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t)?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b
                 )
         )
     """
