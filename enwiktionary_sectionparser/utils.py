@@ -53,23 +53,36 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
     if pattern in separators:
         raise ValueError(f"Invalid search value: {start}")
 
+    match_items = []
+    if separators:
+        match_items.append("(?P<_sep>" + "|".join(separators) + ")")
+        #match_items.append("(?P<_sep>" + "|".join(separators + [tag_pattern]) + ")")
+
+    if isinstance(match_templates, list):
+        # When given a list of templates that should allow their contents to be matched,
+        # capture the template name when matching {{
+        template_start = r"(?P<_tmpl_start>{{(\s|<--.*-->)*(?P<_tmpl_name>[^\n|}{]*)(\s*|<!--.*-->)*(?=[}|]))"
+        template_end = "(?P<_tmpl_end>}})"
+        named_templates = template_start + "|" + template_end
+        match_items.append(named_templates)
+
     if tags:
         open_tags = r"<\s*(?P<_tag_start>" + "|".join(tags) + r")(?:\s[^/>]*)?>"
         close_tags = r"<\s*\/\s*(?P<_tag_end>" + "|".join(tags) + r")\s*>"
         single_tags = r"<\s*(?P<_single_tag>" + "|".join(tags) + r")\b[^/>]*[/]\s*>"
         tag_pattern = "(?i:" + open_tags + "|" + close_tags + "|" + single_tags + ")"
-    else:
-        tag_pattern = ""
+        match_items.append(tag_pattern)
 
-    if separators:
-        pattern = "(?P<_sep>" + "|".join(separators + [tag_pattern]) + ")|(?P<_pat>" + pattern + ")"
 
     if not match_special:
-        pattern += r"|(?P<_special_start>\[\[\s*[:]?\s*(?i:file|media|special)\s*:)|(?P<_special_end>\]\])"
+        match_items.append(r"(?P<_special_start>\[\[\s*[:]?\s*(?i:file|media|special)\s*:)|(?P<_special_end>\]\])")
+
+    match_items.append("(?P<_pat>" + pattern + ")")
+
+    pattern = "|".join(match_items)
 
     start_pos = None
     for m in re.finditer(pattern, text, flags):
-
         if m.group("_pat"):
             if not (in_comment or in_nowiki or in_ref or in_math or in_pre or in_table or in_special or template_depth):
                 if not invert_matches:
@@ -93,6 +106,17 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
             continue
         elif m.group('_sep'):
             cmd = m.group('_sep')
+
+        elif m.group("_tmpl_start"):
+            if template_depth:
+                cmd = "{{"
+            elif m.group("_tmpl_name") and m.group("_tmpl_name") not in match_templates:
+                cmd = "{{"
+            else:
+                continue
+        elif m.group("_tmpl_end"):
+            cmd = "}}"
+
         else:
             raise ValueError("unexpected")
 
