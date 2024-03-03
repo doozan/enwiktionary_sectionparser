@@ -114,16 +114,34 @@ def test_wiki_finditer():
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo {{test|bar}} baz", match_templates=["not_test"])] == ["foo", "baz"]
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo {{test|bar}} baz", match_templates=["not_test"], invert_matches=True)] == ["bar"]
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo {{test|bar}} baz", match_templates=["test"])] == ["foo", "bar", "baz"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo {{test |bar}} baz", match_templates=["test"])] == ["foo", "bar", "baz"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo {{ test <!--comment--> |bar}} baz", match_templates=["test"])] == ["foo", "bar", "baz"]
 
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg]] baz")] == ["foo", "baz"]
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|test]] baz")] == ["foo", "baz"]
-    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|test]] baz", match_special=True)] == ["foo", "baz"]
-    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|test]] baz", invert_matches=True)] == []
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|test]] baz", match_links=True)] == ["foo", "baz"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|bar]] baz")] == ["foo", "baz"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|bar]] baz", match_links=True)] == ["foo", "bar", "baz"]
 
-    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|bar]] baz", match_special=True)] == ["foo", "bar", "baz"]
-    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|bar]] baz", invert_matches=True)] == ["bar"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[x|bar]] baz")] == ["foo", "baz"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[x|bar]] baz", match_links=True)] == ["foo", "bar", "baz"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[x|bar]] baz", invert_matches=True)] == ["bar"]
+
+    assert [m.group(0) for m in wiki_finditer(r"\[bar\]", "foo [[bar]] baz")] == []
+    assert [m.group(0) for m in wiki_finditer(r"\[\[bar", "foo [[bar]] baz")] == ["[[bar"]
+    assert [m.group(0) for m in wiki_finditer(r"bar\]\]", "foo [[bar]] baz")] == []
+    assert [m.group(0) for m in wiki_finditer(r"\[\[bar\]\]", "foo [[bar]] baz")] == ["[[bar]]"]
+
+    assert [m.group(0) for m in wiki_finditer(r"\[bar\]", "foo [[bar]] baz", match_links=True)] == []
+    assert [m.group(0) for m in wiki_finditer(r"\[\[bar", "foo [[bar]] baz", match_links=True)] == ["[[bar"]
+    assert [m.group(0) for m in wiki_finditer(r"bar\]\]", "foo [[bar]] baz", match_links=True)] == []
+    assert [m.group(0) for m in wiki_finditer(r"\[\[bar\]\]", "foo [[bar]] baz", match_links=True)] == ["[[bar]]"]
+
+
 
 def test_wiki_replace():
 
     assert wiki_replace("foo", "FOO", "foo {{foo|foo}} bar foo <ref foo='foo'/> baz foo") == "FOO {{foo|foo}} bar FOO <ref foo='foo'/> baz FOO"
     assert wiki_replace("(foo|bar)", r"#\1#", "foo {{foo|foo}} bar foo <ref foo='foo'/> baz foo", regex=True) == "#foo# {{foo|foo}} #bar# #foo# <ref foo='foo'/> baz #foo#"
+
+    assert wiki_replace("[a-z]", "X", "a [a-z] c") == "a X c"

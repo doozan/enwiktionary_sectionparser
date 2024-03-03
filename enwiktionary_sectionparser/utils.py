@@ -15,7 +15,7 @@
 
 import re
 
-def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=False, match_nowiki=False, match_ref=False, match_math=False, match_pre=False, match_table=False, match_templates=False, match_special=False, return_final_state=False):
+def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=False, match_nowiki=False, match_ref=False, match_math=False, match_pre=False, match_table=False, match_templates=False, match_links=False, return_final_state=False):
 
     """
     matches pattern within wiki formatted text, with basic awareness
@@ -30,8 +30,21 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
     in_math = False
     in_pre = False
     in_table = False
-    in_special = False
+    in_link = False
     template_depth = []
+
+
+    def get_state():
+        return {k:v for k, v in [
+            ("open_ref", in_ref),
+            ("open_nowiki", in_nowiki),
+            ("open_comment", in_comment),
+            ("open_math", in_math),
+            ("open_pre", in_pre),
+            ("open_table", in_table),
+            ("open_link", in_link),
+            ("open_templates", template_depth),
+        ] if v}
 
     separators = []
     tags = []
@@ -53,7 +66,8 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
     if pattern in separators:
         raise ValueError(f"Invalid search value: {start}")
 
-    match_items = []
+    match_items = ["(?P<_pat>" + pattern + ")"]
+
     if separators:
         match_items.append("(?P<_sep>" + "|".join(separators) + ")")
         #match_items.append("(?P<_sep>" + "|".join(separators + [tag_pattern]) + ")")
@@ -61,7 +75,7 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
     if isinstance(match_templates, list):
         # When given a list of templates that should allow their contents to be matched,
         # capture the template name when matching {{
-        template_start = r"(?P<_tmpl_start>{{(\s|<--.*-->)*(?P<_tmpl_name>[^\n|}{]*)(\s*|<!--.*-->)*(?=[}|]))"
+        template_start = r"(?P<_tmpl_start>{{(\s*|<--.*-->)*(?P<_tmpl_name>[^\n|}{]*?)(\s*|<!--.*-->)*(?=[}|]))"
         template_end = "(?P<_tmpl_end>}})"
         named_templates = template_start + "|" + template_end
         match_items.append(named_templates)
@@ -73,11 +87,8 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
         tag_pattern = "(?i:" + open_tags + "|" + close_tags + "|" + single_tags + ")"
         match_items.append(tag_pattern)
 
-
-    # Always consume special links, even when match_special=True to avoid matching inside the special target
-    match_items.append(r"(?P<_special_start>\[\[\s*[:]?\s*(?i:file|image|media|special)\s*:)(?P<_special_target>.*?(?=[|\]]))|(?P<_special_end>\]\])")
-
-    match_items.append("(?P<_pat>" + pattern + ")")
+    # Always consume links [[ ]] targets, never allow matching inside the link target
+    match_items.append(r"(?P<_link_start>\[\[)(?P<_link_target>.*?(?=[|\]]))|(?P<_link_end>\]\])")
 
     pattern = "|".join(match_items)
 
@@ -85,10 +96,14 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
     for m in re.finditer(pattern, text, flags):
 
         if m.group("_pat"):
-            if not (in_comment or in_nowiki or in_ref or in_math or in_pre or in_table or in_special or template_depth):
-                if not invert_matches:
+            state = get_state()
+            if state:
+                if invert_matches:
                     yield m
-            elif invert_matches:
+#                elif m.group(0) != "\n":
+#                    print("skipped", [m.group(0)], get_state())
+
+            elif not invert_matches:
                 yield m
             continue
 
@@ -98,11 +113,11 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
         elif m.group('_tag_end'):
             cmd = "/" + m.group('_tag_end').lower()
 
-        elif m.group('_special_start'):
-            if match_special:
+        elif m.group('_link_start'):
+            if match_links:
                 continue
-            cmd = "[[special"
-        elif m.group('_special_end'):
+            cmd = "[["
+        elif m.group('_link_end'):
             cmd = "]]"
 
         elif m.group('_single_tag'):
@@ -157,6 +172,12 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
         elif cmd == "|}":
             in_table = None
 
+        elif cmd == "[[":
+            in_link = m
+
+        elif cmd == "]]":
+            in_link = None
+
         elif cmd == "{{":
             template_depth.append(m)
 
@@ -180,26 +201,18 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
         elif cmd == "pre":
             in_pre = m
 
-        elif cmd == "[[special":
-            in_special = m
+        elif cmd == "[[":
+            in_link = m
 
         elif cmd == "]]":
-            in_special = None
+            in_link = None
 
         else:
             print("Unexpected match", cmd, m)
             raise ValueError("Unexpected match", cmd)
 
     if return_final_state:
-        yield {k:v for k, v in [
-            ("open_ref", in_ref),
-            ("open_nowiki", in_nowiki),
-            ("open_comment", in_comment),
-            ("open_math", in_math),
-            ("open_pre", in_pre),
-            ("open_table", in_table),
-            ("open_templates", template_depth),
-        ] if v}
+        yield get_state()
 
 def wiki_splitlines(text, return_state=False):
     prev_pos = 0
