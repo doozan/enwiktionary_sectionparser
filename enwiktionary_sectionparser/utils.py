@@ -74,8 +74,8 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
         match_items.append(tag_pattern)
 
 
-    if not match_special:
-        match_items.append(r"(?P<_special_start>\[\[\s*[:]?\s*(?i:file|media|special)\s*:)|(?P<_special_end>\]\])")
+    # Always consume special links, even when match_special=True to avoid matching inside the special target
+    match_items.append(r"(?P<_special_start>\[\[\s*[:]?\s*(?i:file|image|media|special)\s*:)(?P<_special_target>.*?(?=[|\]]))|(?P<_special_end>\]\])")
 
     match_items.append("(?P<_pat>" + pattern + ")")
 
@@ -83,6 +83,7 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
 
     start_pos = None
     for m in re.finditer(pattern, text, flags):
+
         if m.group("_pat"):
             if not (in_comment or in_nowiki or in_ref or in_math or in_pre or in_table or in_special or template_depth):
                 if not invert_matches:
@@ -98,6 +99,8 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
             cmd = "/" + m.group('_tag_end').lower()
 
         elif m.group('_special_start'):
+            if match_special:
+                continue
             cmd = "[[special"
         elif m.group('_special_end'):
             cmd = "]]"

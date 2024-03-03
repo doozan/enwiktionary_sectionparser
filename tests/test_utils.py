@@ -115,9 +115,13 @@ def test_wiki_finditer():
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo {{test|bar}} baz", match_templates=["not_test"], invert_matches=True)] == ["bar"]
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo {{test|bar}} baz", match_templates=["test"])] == ["foo", "bar", "baz"]
 
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg]] baz")] == ["foo", "baz"]
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|test]] baz")] == ["foo", "baz"]
-    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|test]] baz", match_special=True)] == ["foo", "bar", "baz"]
-    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|test]] baz", invert_matches=True)] == ["bar"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|test]] baz", match_special=True)] == ["foo", "baz"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|test]] baz", invert_matches=True)] == []
+
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|bar]] baz", match_special=True)] == ["foo", "bar", "baz"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|bar]] baz", invert_matches=True)] == ["bar"]
 
 def test_wiki_replace():
 
