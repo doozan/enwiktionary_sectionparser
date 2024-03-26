@@ -121,11 +121,21 @@ def test_wiki_finditer():
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|test]] baz")] == ["foo", "baz"]
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|test]] baz", match_links=True)] == ["foo", "baz"]
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|bar]] baz")] == ["foo", "baz"]
-    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|bar]] baz", match_links=True)] == ["foo", "bar", "baz"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|bar]] baz", match_links=True)] == ["foo", "baz"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test/bar.jpg|bar]] baz", match_special_links=True)] == ["foo", "bar", "baz"]
 
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[x|bar]] baz")] == ["foo", "baz"]
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[x|bar]] baz", match_links=True)] == ["foo", "bar", "baz"]
     assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[x|bar]] baz", invert_matches=True)] == ["bar"]
+
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[bar]] baz")] == ["foo", "baz"]
+    # never match link destination
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[bar]] baz", match_links=True)] == ["foo", "baz"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[bar]] baz", invert_matches=True)] == []
+
+    print("-----------__")
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test|test [[internal link]] bar]] baz")] == ["foo", "baz"]
+    assert [m.group(0) for m in wiki_finditer("(foo|bar|baz|x)", "foo [[File:test|test [[internal link]] bar]] baz", match_special_links=True)] == ["foo", "bar", "baz"]
 
     assert [m.group(0) for m in wiki_finditer(r"\[bar\]", "foo [[bar]] baz")] == []
     assert [m.group(0) for m in wiki_finditer(r"\[\[bar", "foo [[bar]] baz")] == ["[[bar"]
