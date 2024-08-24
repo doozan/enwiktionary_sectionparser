@@ -358,3 +358,26 @@ From {{bor|en|hi|भटूरा}} or {{bor|en|pa|ਭਟੂਰਾ}}.
     log = []
     wikt = sectionparser.parse(text, "test", log)
     assert sorted(wikt._state.keys()) == ["open_comment"]
+
+
+def test_weird_ety():
+
+    text = """\
+==English==
+{{wikipedia}}
+
+===Etymology 1===
+
+===Etymology 2.1===
+
+===Etymology 2.2===
+
+===Etymology 3===
+
+===Etymology 4.1===
+
+===Etymology 4.2===\
+"""
+
+    wikt = sectionparser.parse(text, "test")
+    assert str(wikt) == text

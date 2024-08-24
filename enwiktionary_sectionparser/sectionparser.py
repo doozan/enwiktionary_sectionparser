@@ -107,10 +107,15 @@ class SectionParser():
                 rpad = (len(m.group(3))-level) * "="
                 header_text = m.group(4)
 
-                m = re.match(r"\s*(.*?)\s*(\d*)\s*$", m.group(2))
 
-                title = lpad + m.group(1) + rpad
-                count = m.group(2)
+                # Count may be in the format N or N.N (Etymology 2.3)
+                count_m = re.match(r"\s*([^\d]*?)\s*(\d+[.]\d+|\d*)\s*$", m.group(2))
+                if count_m:
+                    title = lpad + count_m.group(1) + rpad
+                    count = count_m.group(2)
+                else:
+                    title = m.group(2)
+                    count = None
 
                 if not prev_section:
                     parent = self
