@@ -17,10 +17,6 @@ Specifically, it will make the following changes as needed
 * No blank line after any heading except when another heading immediately follows.
 * No whitespace between = and heading title, i.e. ==English== and ===Noun===, not == English == or === Noun ===.
 * No blank lines between the first language heading and any preceding content.
-* One horizontal rule ---- between language sections.
-* The horizontal rule (----) on its own line.
-* One blank line before the ---- between language sections.
-* One blank line after the ---- between language sections.
 * Categories and category templates are placed at the end of each language section.
 * Topline templates (LDL, normalized, hot word, rfd) are placed at the top of an entry immediately after the L2 header.
 
@@ -32,11 +28,11 @@ back to wiktionary, you should include this string in the edit summary.
 ### Basic usage
 
 ```python
-import enwiktionary_sectionparser as enwiktparser
-entry = enwiktparser.parse(page_text, page_title)
+import enwiktionary_sectionparser as parser
+entry = parser.parse(page_text, page_title)
 ```
 
-If the page can be clealy parsed, ``entry`` will be a ``enwiktionary_sectionparser.SectionParser`` object, which acts like an
+If the page can be clealy parsed, ``entry`` will be a ``SectionParser`` object, which acts like an
 ordinary ``str`` object with some extra methods for navigating and manipulating the page sections.
 
 In rare circumstances (unclosed HTML comments, unclosed templates, etc) the page cannot be cleanly parsed and should not
@@ -51,16 +47,61 @@ be ``None``.
 
 ``matches`` can be a string or a callable. If it's a string, it will match the section title. Callables can be used for more advanced matching.
 
-filter_sections() returns a list of ``enwiktionary_sectionparser.SectionParser`` objects which can act like strings but also provide methods for
+filter_sections() returns a list of ``SectionParser`` objects which can act like strings but also provide methods for
 for navigating and manipulating the section and any descendent sections.
 
-#### Finding a specific L2 section
+### Recipes
+
+#### Get the "Japanese" L2 section
+
 ```python
-entry = enwiktparser.parse(page_text, page_title)
+entry = parser.parse(page_text, page_title)
 all_japanese_l2s = entry.filter_sections(matches="Japanese", recursive=False)
 if len(all_japanese_l2s) > 1:
     raise ValueError("Multiple Japanese L2 sections")
 if not all_japanese_l2s:
     raise ValueError("No Japanese L2 section not found")
 japanese = all_japanese_l2s[0]
+```
+
+#### Get "English::Noun::Usage notes"
+```python
+usage_notes = entry.filter_sections(matches=lambda x: x.name == "Usage notes" and x.path == ("English", "Noun"))
+```
+
+#### Add a new Spanish L2 entry
+```python
+entry = parser.parse(page_text, page_title)
+if entry.filter_sections(matches="Spanish", recursive=False):
+    raise ValueError("Spanish entry already exists")
+
+new_section_text = """\
+==Spanish==
+
+===Noun===
+{{es-noun|m}}
+
+# [[foo]]
+# [[bar]]
+"""
+
+new_section = parser.parse(new_section_text)
+entry.add_new_section(new_section)
+```
+
+#### Add a "DRAE" link to the "Spanish::Further reading" if it is not already included, create "Further reading" if it doesn't exist
+
+```python
+entry = parser.parse(page_text, page_title)
+
+spanish = next(entry.ifilter_sections(matches="Spanish", recursive=False), None)
+if not spanish:
+    return
+
+section = next(spanish.ifilter_sections(matches="Further reading"), None)
+if not section:
+    section = spanish.add_section("Further reading")
+
+if "DRAE" not in str(section):
+    section.add_line("* {{R:es:DRAE}}")
 ```
