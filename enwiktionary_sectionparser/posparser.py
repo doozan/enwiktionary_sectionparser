@@ -210,6 +210,9 @@ class PosParser():
                 elif is_bare_quote(item):
                     item._type = "bare_quote"
 
+                elif is_bare_uxi(item):
+                    item._type = "bare_uxi"
+
                 elif is_bare_ux(item):
                     item._type = "bare_ux"
 
@@ -267,6 +270,9 @@ def is_bold(text):
     # Returns True if entire string is enclosed in ''' bold wikimarkup
     bold = "(?<!')(?:'{3}|'{5})(?!')"
     return re.match(fr"{bold}.*{bold}$", text) and not re.search(bold, text[3:-3])
+
+def is_bare_uxi(item):
+    return not item._children and re.match(r"{{lang[|][^{}]*}} — [A-Za-z\"',;.?! ]+$", item.data)
 
 def is_bare_ux(item):
 
