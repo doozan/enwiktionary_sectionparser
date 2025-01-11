@@ -258,7 +258,17 @@ def is_template(template, text):
 def has_link(text):
     return bool(re.search(r"(\[\[[^\[\]]+\]\]|{{\s*(l|m)\s*\|)", text))
 
+def strip_wikilinks(text):
+    # just good enough for use by is_sentence
+    return re.sub(r"\[\[(?:[^\[\]]*[|])?(.*?)\]\]", r"\1", text)
+
+def strip_template_links(text):
+    # only good enough for use by is_sentence
+    return re.sub(r"{{(?:l|m)[|].*?[|](.*?)}}", r"\1", text)
+
 def is_sentence(text):
+    text = strip_wikilinks(text)
+    text = strip_template_links(text)
     return bool(re.match(r"""^\W*[A-Z].*[.?!]["'\W]*$""", text))
 
 def is_italic(text):
@@ -290,9 +300,9 @@ def is_bare_ux(item):
         return False
 
     # Should not contain links
-    if has_link(passage):
-        #print("has link")
-        return False
+#    if has_link(passage):
+#        #print("has link")
+#        return False
 
     # TODO: English passages must be sentences
 

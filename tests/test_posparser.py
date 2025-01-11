@@ -1,5 +1,6 @@
 import pytest
 import enwiktionary_sectionparser as parser
+import enwiktionary_sectionparser.posparser as posparser
 from enwiktionary_sectionparser.posparser import is_sentence, is_bare_ux, is_template, strip_ref_tags, is_bare_quote
 
 def test_basic():
@@ -70,6 +71,8 @@ def test_is_sentence():
     assert is_sentence("This is a sentence?") == True
     assert is_sentence("This is a sentence!") == True
     assert is_sentence("''This is a sentence.''") == True
+    assert is_sentence("[[this#test|This]] is a sentence!") == True
+    assert is_sentence("This is a sentence!") == True
     assert is_sentence("This is not a sentence;") == False
     assert is_sentence("This is not a sentence") == False
     assert is_sentence("this Is not a sentence.") == False
@@ -134,4 +137,17 @@ def test_is_bare_quote():
         assert is_bare_quote(Item(test, None)) == True
 
 
+def test_strip_wikilinks():
+    assert posparser.strip_wikilinks("[[b]]") == "b"
+    assert posparser.strip_wikilinks("a [[b]] c") == "a b c"
+    assert posparser.strip_wikilinks("[[b]] c") == "b c"
+    assert posparser.strip_wikilinks("a [[b]]") == "a b"
+
+    assert posparser.strip_wikilinks("[[test|Test]]") == "Test"
+    assert posparser.strip_wikilinks("[[test#Lang|Test]]") == "Test"
+
+def test_strip_template_links():
+    assert posparser.strip_template_links("a {{l|en|b}} c") == "a b c"
+    assert posparser.strip_template_links("a {{m|en|b}} c") == "a b c"
+    assert posparser.strip_template_links("a {{x|en|b}} c") == "a {{x|en|b}} c"
 
