@@ -189,6 +189,8 @@ class PosParser():
 
                 # Strip html comments before checking that text is a single template
                 text = strip_html_comments(item.data)
+                text = strip_safe_templates(text)
+                # TODO: Strip categories
                 text = strip_ref_tags(text)
                 text = text.strip()
                 if template_type != "sense" and not is_template(m.group('t'), text):
@@ -243,6 +245,15 @@ def strip_html_comments(text):
 
 def strip_ref_tags(text):
     return re.sub(r"(<\s*ref[^<>/]*>.*?<\s*/\s*ref\s*>|<\s*ref[^<>/]*/\s*>)", "", text, flags=re.DOTALL)
+
+
+SAFE_TEMPLATES = ["att", "attn", "attention", "C", "c", "top", "topic", "anchor"]
+def strip_safe_templates(text):
+    wiki = mwparser.parse(text)
+    to_remove = [str(t) for t in wiki.ifilter_templates() if t.name in SAFE_TEMPLATES]
+    for old in to_remove:
+        text = text.replace(old, "")
+    return text
 
 def is_template(template, text):
     """ Returns True if text contains only {{template_name|...}} """

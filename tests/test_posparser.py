@@ -151,3 +151,9 @@ def test_strip_template_links():
     assert posparser.strip_template_links("a {{m|en|b}} c") == "a b c"
     assert posparser.strip_template_links("a {{x|en|b}} c") == "a {{x|en|b}} c"
 
+def test_strip_safe_templates():
+    assert posparser.strip_safe_templates("a {{b|test}} c") == "a {{b|test}} c"
+    assert posparser.strip_safe_templates("a {{attn|en|test}} c") == "a  c"
+    assert posparser.strip_safe_templates("a {{C|en|test}} c") == "a  c"
+    assert posparser.strip_safe_templates("a {{test|foo{{attn|test}}bar}} c") == "a {{test|foobar}} c"
+    assert posparser.strip_safe_templates("a {{attn|en|foo{{test|test}}bar}} c") == "a  c"
