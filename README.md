@@ -75,18 +75,13 @@ entry = parser.parse(page_text, page_title)
 if entry.filter_sections(matches="Spanish", recursive=False):
     raise ValueError("Spanish entry already exists")
 
-new_section_text = """\
-==Spanish==
-
-===Noun===
+spanish_data = """===Noun===
 {{es-noun|m}}
 
 # [[foo]]
 # [[bar]]
 """
-
-new_section = parser.parse(new_section_text)
-entry.add_new_section(new_section)
+spanish = entry.add_child("Spanish", spanish_data)
 ```
 
 #### Add a "DRAE" link to the "Spanish::Further reading" if it is not already included, create "Further reading" if it doesn't exist
@@ -98,10 +93,10 @@ spanish = next(entry.ifilter_sections(matches="Spanish", recursive=False), None)
 if not spanish:
     return
 
-section = next(spanish.ifilter_sections(matches="Further reading"), None)
-if not section:
-    section = spanish.add_section("Further reading")
+further_reading = next(spanish.ifilter_sections(matches="Further reading"), None)
+if not further_reading:
+    further_reading = spanish.add_child("Further reading")
 
-if "DRAE" not in str(section):
-    section.add_line("* {{R:es:DRAE}}")
+if "DRAE" not in str(further_reading):
+    further_reading.add_line("* {{R:es:DRAE}}")
 ```

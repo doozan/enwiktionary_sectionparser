@@ -381,3 +381,83 @@ def test_weird_ety():
 
     wikt = sectionparser.parse(text, "test")
     assert str(wikt) == text
+
+
+def test_add_child():
+    text = """\
+==English==
+"""
+
+    result = """\
+==English==
+
+===Noun===
+{{en-noun}}
+
+# [[def]]\
+"""
+
+    entry = SectionParser(text, "test")
+
+    english = next(entry.ifilter_sections(matches="English", recursive=False), None)
+    text = "{{en-noun}}\n\n# [[def]]"
+    noun = english.add_child("Noun", text)
+
+    res = str(entry)
+    assert res.splitlines() == result.splitlines()
+
+def test_add_text():
+
+    text = """\
+==English==
+
+===Noun===
+"""
+
+    result = """\
+==English==
+
+===Noun===
+{{en-noun}}
+
+# [[def]]\
+"""
+
+    entry = SectionParser(text, "test")
+
+    noun = next(entry.ifilter_sections(matches="Noun", recursive=True), None)
+    text = "{{en-noun}}\n\n# [[def]]"
+    noun.add_text(text)
+
+    res = str(entry)
+    assert res.splitlines() == result.splitlines()
+
+
+def test_add_line():
+
+    text = """\
+==English==
+
+===Noun===
+"""
+
+    result = """\
+==English==
+
+===Noun===
+{{en-noun}}
+
+# [[def]]\
+"""
+
+    entry = SectionParser(text, "test")
+
+    noun = next(entry.ifilter_sections(matches="Noun", recursive=True), None)
+    noun.add_line("{{en-noun}}")
+    noun.add_line("")
+    noun.add_line("# [[def]]")
+
+    res = str(entry)
+    assert res.splitlines() == result.splitlines()
+
+

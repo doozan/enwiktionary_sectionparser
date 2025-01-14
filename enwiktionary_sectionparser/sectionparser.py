@@ -414,3 +414,31 @@ class Section():
 
     def __str__(self):
         return self.header + self.toplines + self.content_text + "".join(list(map(str, self._children))) + self.categories
+
+    def add_child(self, title, data=None, position=None):
+        new_child = Section(self, self.level+1, title, count=None)
+
+        if not data:
+            pass
+        elif isinstance(data, str) and data.strip():
+            new_child.add_text(data)
+        else:
+            for item in data:
+                new_child.add(item)
+
+        if position is not None:
+            self._children.insert(position, new_child)
+        else:
+            self._children.append(new_child)
+
+        return new_child
+
+    def add_line(self, item, position=None):
+        if position is not None:
+            self.content_wikilines.insert(position, item)
+        else:
+            self.add(item)
+
+    def add_text(self, text):
+        for line in wiki_splitlines(text):
+            self.add(line)
