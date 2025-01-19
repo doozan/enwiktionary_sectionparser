@@ -75,12 +75,12 @@ class PosParser():
         """
         self._log = log
         self._changes = []
+        self._section = section
 
         self.headlines, self.senses, self.footlines = self.parse(section)
         if self.headlines and self.senses and all(l.strip() for l in self.headlines):
             self.headlines.append("")
             self._changes.append("cleanup whitespace per WT:NORM")
-
 
     def log(self, error, section, line):
         if self._log is None:
@@ -90,6 +90,10 @@ class PosParser():
 #        path = ":".join(reversed(lineage))
         self._log.append((error, path, line))
         return
+
+    @property
+    def section(self):
+        return self._section
 
     @property
     def changelog(self):
