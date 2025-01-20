@@ -247,6 +247,9 @@ def wiki_splitlines(text, return_state=False):
 def wiki_search(pattern, text, **kwargs):
     return wiki_finditer(pattern, text, **kwargs)
 
+def wiki_contains(pattern, text, **kwargs):
+    return any(wiki_finditer(re.escape(pattern), text, **kwargs))
+
 def wiki_replace(pattern, replacement, text, regex=False, **kwargs):
 
     prev_pos = 0
