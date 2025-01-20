@@ -127,12 +127,12 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
         elif m.group('_link_end'):
             cmd = "]]"
 
-        elif m.group('_single_tag'):
+        elif tags and m.group('_single_tag'):
             continue
-        elif m.group('_sep'):
+        elif separators and m.group('_sep'):
             cmd = m.group('_sep')
 
-        elif  isinstance(match_templates, list) and m.group("_tmpl_start"):
+        elif isinstance(match_templates, list) and m.group("_tmpl_start"):
             if template_stack:
                 cmd = "{{"
             elif m.group("_tmpl_name") and m.group("_tmpl_name") not in match_templates:
