@@ -244,11 +244,63 @@ def wiki_splitlines(text, return_state=False):
     if return_state:
         yield state
 
+def wiki_resplit(pattern, text, **kwargs):
+
+    # wiki-aware re.split()
+
+    return_capture = re.search(r"(?<!\\)\(.*(?<!\\)\)", pattern)
+
+    prev_end = 0
+    for m in wiki_finditer(pattern, text, **kwargs):
+        start = m.start("_pat")
+        if return_capture:
+            yield (text[prev_end:start], m.group("_pat"))
+        else:
+            yield text[prev_end:start]
+        prev_end = m.end("_pat")
+
+    if return_capture:
+        yield (text[prev_end:], "")
+    else:
+        yield text[prev_end:]
+
+def wiki_split(sep, text, maxsplit=-1, **kwargs):
+    if maxsplit != -1:
+        raise ValueError("maxsplit param not implemented")
+
+    return list(wiki_resplit(re.escape(sep), text, **kwargs))
+
+
 def wiki_search(pattern, text, **kwargs):
     return wiki_finditer(pattern, text, **kwargs)
 
-def wiki_contains(pattern, text, **kwargs):
-    return any(wiki_finditer(re.escape(pattern), text, **kwargs))
+def wiki_contains(target, text, **kwargs):
+    kwargs["return_final_state"] = True
+    m = next(wiki_finditer(re.escape(target), text, **kwargs), None)
+    if isinstance(m, re.Match):
+        return True
+
+    elif isinstance(m, dict):
+        if m == {}:
+            return False
+
+        # if there was an unclosed item, valid matches may have been discarded
+        # re-do the search starting at the first unclosed match
+        else:
+            first_unclosed = len(text)
+            for k,v in m.items():
+                if isinstance(v, list):
+                    for item in v:
+                        if item.end() < first_unclosed:
+                            first_unclosed = item.end()
+
+                elif item.end < first_unclosed:
+                    first_unclosed = item.end()
+
+            return wiki_contains(target, text[first_unclosed:], **kwargs)
+
+    else:
+        raise ValueError("unexpected value", m)
 
 def wiki_replace(pattern, replacement, text, regex=False, **kwargs):
 

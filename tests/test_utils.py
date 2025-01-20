@@ -1,4 +1,4 @@
-from enwiktionary_sectionparser.utils import wiki_splitlines, wiki_finditer, wiki_replace
+from enwiktionary_sectionparser.utils import wiki_splitlines, wiki_finditer, wiki_replace, wiki_contains, wiki_resplit, wiki_split
 
 def test_wiki_splitlines():
 
@@ -155,3 +155,78 @@ def test_wiki_replace():
     assert wiki_replace("(foo|bar)", r"#\1#", "foo {{foo|foo}} bar foo <ref foo='foo'/> baz foo", regex=True) == "#foo# {{foo|foo}} #bar# #foo# <ref foo='foo'/> baz #foo#"
 
     assert wiki_replace("[a-z]", "X", "a [a-z] c") == "a X c"
+
+
+def test_wiki_contains():
+
+    assert wiki_contains("a", "a") == True
+    assert wiki_contains("a", "<a>") == True
+    assert wiki_contains("a", "<ref>a</ref>") == False
+    assert wiki_contains("a", "<ref aaa=aaa>a</ref>") == False
+
+    assert wiki_contains("a", "{{test|a}}") == False
+    assert wiki_contains("a", "}} a") == True
+    assert wiki_contains("a", "{{ a") == True
+
+def test_wiki_resplit():
+
+    # capturing group
+    line = "{{blah|blah, blah}} blah, blah; blah / blah [[blah|blah,blah]]"
+    res = list(wiki_resplit(r"([\/,;])", line))
+    print(res)
+    assert res == [("{{blah|blah, blah}} blah", ","), (" blah", ";"), (" blah ", "/"), (" blah [[blah|blah,blah]]", "")]
+
+
+    # no capturing group
+    line = "{{blah|blah, blah}} blah, blah; blah / blah [[blah|blah,blah]]"
+    res = list(wiki_resplit(r"[\/,;]", line))
+    print(res)
+    assert res == ["{{blah|blah, blah}} blah", " blah", " blah ", " blah [[blah|blah,blah]]"]
+
+
+    # open wikilink
+    line = "{{blah|blah, blah}} blah, blah; blah / blah [[blah|blah,blah"
+    res = list(wiki_resplit(r"[\/,;]", line))
+    print(res)
+    assert res == ["{{blah|blah, blah}} blah", " blah", " blah ", " blah [[blah|blah,blah"]
+
+
+def test_wiki_split():
+    line = "{{blah|blah, blah}}, blah, blah, blah, [[blah|blah,blah]]"
+    res = wiki_split(",", line)
+    print(res)
+    assert res == ["{{blah|blah, blah}}", " blah", " blah", " blah", " [[blah|blah,blah]]"]
+
+    line = "a (b|{{test}}) c"
+    res = wiki_split("(b|{{test}})", line)
+    print(res)
+    assert res == ["a ", " c"]
+
+    # don't match inside wikitext
+    line = "a (b|{{test}}) c"
+    res = wiki_split("test", line)
+    print(res)
+    assert res == [line]
+
+    line = "a (b|{{test}}) c"
+    res = wiki_split("}", line)
+    print(res)
+    assert res == [line]
+
+    line = "a (b|{{test}}) c"
+    res = wiki_split("}}", line)
+    print(res)
+    assert res == [line]
+
+    # Known bug - may match wikitext if the separtor contains the start of the wikitext
+    line = "a (b|{{test}}) c"
+    res = wiki_split("{{", line)
+    print(res)
+    assert res == ['a (b|', 'test}}) c']
+
+    # Known bug - may match wikitext if the separtor contains the start of the wikitext
+    line = "a (b|{{test}}) c"
+    res = wiki_split("{{test", line)
+    print(res)
+    assert res == ['a (b|', '}}) c']
+
