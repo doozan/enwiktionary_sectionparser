@@ -19,9 +19,15 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
 
     """
     matches pattern within wiki formatted text, with basic awareness
-    of templates, html comments and <nowiki> tags
+    of wiki elements (templates, html comments, tags, tables, etc)
+
+    by default, only match text outside of wikielements, set match_*=True to enable matching inside specific elements
+
+    ``match_templates`` - if set to ``True``, match inside all templates, if a list of names, only match inside the given templates
 
     if invert_matches is set, it will return only instances where pattern would be discarded for being inside the non-permitted wiki elements
+
+    NOTE: never matches inside a wikilink target like [[link]] or [[link#anchor|test]]
     """
 
     in_comment = False
@@ -103,9 +109,9 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
             continue
 
         cmd = None
-        if m.group('_tag_start'):
+        if tags and m.group('_tag_start'):
             cmd = m.group('_tag_start').lower()
-        elif m.group('_tag_end'):
+        elif tags and m.group('_tag_end'):
             cmd = "/" + m.group('_tag_end').lower()
 
         elif m.group('_link_start'):
@@ -126,18 +132,19 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
         elif m.group('_sep'):
             cmd = m.group('_sep')
 
-        elif m.group("_tmpl_start"):
+        elif  isinstance(match_templates, list) and m.group("_tmpl_start"):
             if template_stack:
                 cmd = "{{"
             elif m.group("_tmpl_name") and m.group("_tmpl_name") not in match_templates:
                 cmd = "{{"
             else:
                 continue
-        elif m.group("_tmpl_end"):
+        elif isinstance(match_templates, list) and m.group("_tmpl_end"):
             cmd = "}}"
 
         else:
-            raise ValueError("unexpected")
+            print("Unexpected match", cmd, m)
+            raise ValueError("unexpected", cmd, m)
 
         # html comments, <pre> and <math> consume everything until they are closed
         if in_comment:
