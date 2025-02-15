@@ -222,12 +222,12 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
     if return_final_state:
         yield get_state()
 
-def wiki_splitlines(text, return_state=False):
+def wiki_splitlines(text, return_state=False, **kwargs):
     prev_pos = 0
 
     state = None
     res = []
-    for m in wiki_finditer("\n", text, return_final_state=return_state):
+    for m in wiki_finditer("\n", text, return_final_state=return_state, **kwargs):
         if return_state and isinstance(m, dict):
             state = m
             break
