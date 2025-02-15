@@ -8,6 +8,7 @@ __version__ = "0.1.0"
 __author__ = 'Jeff Doozan'
 
 from . import sectionparser, posparser
+from .sections import ALL_POS
 
 SectionParser = sectionparser.SectionParser
 Section = sectionparser.Section
