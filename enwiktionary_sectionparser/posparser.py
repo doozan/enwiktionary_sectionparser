@@ -187,26 +187,33 @@ class PosParser():
     def set_item_types(self, items):
 
         for item in items:
-            m = re.search(self.re_templates, item.data)
-            if m:
-                template_type = self.template_to_type[m.group('t')]
 
-                # Strip html comments before checking that text is a single template
-                text = strip_html_comments(item.data)
-                text = strip_safe_templates(text)
-                # TODO: Strip categories
-                text = strip_ref_tags(text)
-                text = text.strip()
-                if template_type != "sense" and not is_template(m.group('t'), text):
-                    #print("NOT TEMPLATE", [m.group('t'), item.data])
-                    item._type = "unknown"
-
-                # "zh-x" may be a quote or a ux, depending on the existence of a "ref=" parameter
-                elif m.group("t") == "zh-x" and re.search(r"\|\s*ref\s*=", item.data):
-                    item._type = "quote"
-
+            template_types = [self.template_to_type[m.group('t')] for m in re.finditer(self.re_templates, item.data)]
+            if template_types:
+                if not all(t == template_types[0] for t in template_types):
+                    item._type = "bad"
                 else:
-                    item._type = template_type
+                    m = re.search(self.re_templates, item.data)
+                    template_type = template_types[0]
+                    template_type = self.template_to_type[m.group('t')]
+
+                    # Strip html comments before checking that text is a single template
+                    text = strip_html_comments(item.data)
+                    text = strip_safe_templates(text)
+                    # TODO: Strip categories
+                    text = strip_ref_tags(text)
+                    text = text.strip()
+
+                    if template_type != "sense" and not is_template(m.group('t'), text):
+                        #print("NOT TEMPLATE", [m.group('t'), item.data])
+                        item._type = "bad"
+
+                    # "zh-x" may be a quote or a ux, depending on the existence of a "ref=" parameter
+                    elif m.group("t") == "zh-x" and re.search(r"\|\s*ref\s*=", item.data):
+                        item._type = "quote"
+
+                    else:
+                        item._type = template_type
 
             else:
                 # RQ: templates are quotes
@@ -233,6 +240,11 @@ class PosParser():
                  and all("[[" in i.data and "]]" in i.data for i in items if i._type == "unknown"):
             for i in items:
                 i._type = "sense"
+
+        # TODO: update callers to handle 'bad' as a line type
+        for i in items:
+            if i._type == "bad":
+                i._type = "unknown"
 
         for item in items:
             if item._children:
