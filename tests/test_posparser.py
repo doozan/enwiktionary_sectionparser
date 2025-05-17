@@ -126,6 +126,31 @@ def test_newline():
 # sense 2\
 """
 
+def test_empty():
+    text = """\
+===Adjective===
+{{en-adj}}
+
+# sense 1
+#
+# sense 2
+"""
+
+    wikt = parser.parse(text, "test")
+    section = wikt.filter_sections(matches="Adjective")[0]
+    pos = parser.parse_pos(section)
+
+    assert len(pos.senses) == 2
+
+    assert str(pos) == """\
+{{en-adj}}
+
+# sense 1
+# sense 2\
+"""
+
+
+
 def test_is_bare_quote():
 
     tests = [

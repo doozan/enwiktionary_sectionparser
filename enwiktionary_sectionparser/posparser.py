@@ -147,6 +147,10 @@ class PosParser():
             data = m.group(3)
             trailing_space = m.group(4)
 
+            if not data:
+                self._changes.append("removed empty item")
+                continue
+
             level = len(prefix)
             style = prefix[-1]
 
