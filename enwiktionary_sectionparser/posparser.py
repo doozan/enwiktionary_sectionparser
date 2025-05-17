@@ -80,7 +80,7 @@ class PosParser():
         self.headlines, self.senses, self.footlines = self.parse(section)
         if self.headlines and self.senses and all(l.strip() for l in self.headlines):
             self.headlines.append("")
-            self._changes.append("cleanup whitespace per WT:NORM")
+            self._changes.append("added empty line between header and senses per [[WT:NORM]]")
 
     def log(self, error, section, line):
         if self._log is None:
@@ -137,13 +137,16 @@ class PosParser():
                 self._changes.append("removed newline in list")
                 continue
 
-            m = re.match(f'[#:*]+', data)
+            m = re.match(r'([#:*]+)(\s*)(.*)(\s*)', data, flags=re.DOTALL)
             if not m:
 #                print("FAILED processing list, found non_list_item", section.path, data)
                 return
 
+            prefix = m.group(1)
+            space = m.group(2)
+            data = m.group(3)
+            trailing_space = m.group(4)
 
-            prefix = m.group(0)
             level = len(prefix)
             style = prefix[-1]
 
@@ -164,15 +167,11 @@ class PosParser():
                 idx = len(list_items)
                 name = style + str(idx+1)
 
-            old_len = len(data)
-            data = re.sub(r'^[#*:]+\s*', '', data)
-            if len(data) + len(prefix) + 1 != old_len:
-                self._changes.append("cleanup whitespace per WT:NORM")
+            if space != " ":
+                self._changes.append("one space between format and line data per [[WT:NORM]]")
 
-            old_len = len(data)
-            data = data.rstrip()
-            if len(data) != old_len:
-                self._changes.append("cleanup whitespace per WT:NORM")
+            if trailing_space:
+                self._changes.append("remove trailing spaces per [[WT:NORM]]")
 
             item = ListItem(parent, prefix, data, name)
             if parent:

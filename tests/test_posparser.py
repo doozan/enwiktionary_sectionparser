@@ -103,7 +103,7 @@ def test_strip_ref_tags():
 
 
 
-def test_basic():
+def test_newline():
     text = """\
 ===Adjective===
 {{en-adj}}
@@ -119,6 +119,12 @@ def test_basic():
 
     assert len(pos.senses) == 2
 
+    assert str(pos) == """\
+{{en-adj}}
+
+# sense 1
+# sense 2\
+"""
 
 def test_is_bare_quote():
 
