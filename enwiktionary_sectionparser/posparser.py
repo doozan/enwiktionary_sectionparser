@@ -78,18 +78,32 @@ class PosParser():
         self._section = section
 
         self.headlines, self.senses, self.footlines = self.parse(section)
-        if self.headlines and self.senses and all(l.strip() for l in self.headlines):
-            self.headlines.append("")
-            self._changes.append("added empty line between header and senses per [[WT:NORM]]")
+
+        if self.headlines and self.senses:
+            empty_count = sum(1 for l in self.headlines if l.strip() == "")
+
+            trailing_empty = 0
+            while (self.headlines and self.headlines[-1].strip() == ""):
+                self.headlines.pop()
+                trailing_empty += 1
+
+            # Usually entries with [[File:]] or {{rfc}} or {{wikipedia}} - don't mess with existing newlines
+            if trailing_empty != empty_count:
+                pass
+            elif trailing_empty == 1:
+                pass
+            elif trailing_empty == 0:
+                self._changes.append("added empty line between header and senses per [[WT:NORM]]")
+            elif trailing_empty > 1:
+                self._changes.append("one empty line between header and senses per [[WT:NORM]]")
 
     def log(self, error, section, line):
         if self._log is None:
             return
-#        lineage = list(section.lineage) if section else [ self.title, "" ]
-#        page = lineage.pop
-#        path = ":".join(reversed(lineage))
+        lineage = list(section.lineage) if section else [ self.title, "" ]
+        page = lineage.pop()
+        path = ":".join(reversed(lineage))
         self._log.append((error, path, line))
-        return
 
     @property
     def section(self):
@@ -132,14 +146,14 @@ class PosParser():
         prev_item = None
         prev_level = None
 
-        for data in all_items:
-            if not data.strip():
+        for line in all_items:
+            if not line.strip():
                 self._changes.append("removed newline in list")
                 continue
 
-            m = re.match(r'([#:*]+)(\s*)(.*)(\s*)', data, flags=re.DOTALL)
+            m = re.match(r'([#:*]+)(\s*)(.*)(\s*)', line, flags=re.DOTALL)
             if not m:
-#                print("FAILED processing list, found non_list_item", section.path, data)
+#                print("FAILED processing list, found non_list_item", section.path, line)
                 return
 
             prefix = m.group(1)
@@ -256,7 +270,7 @@ class PosParser():
 
 
     def __str__(self):
-        return "\n".join(map(str, self.headlines + self.senses + self.footlines))
+        return "\n".join(map(str, self.headlines + [""] + self.senses + self.footlines))
 
 
 def strip_html_comments(text):

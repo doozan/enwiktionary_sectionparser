@@ -22,7 +22,7 @@ blah blah
     section = wikt.filter_sections(matches="Noun")[0]
     pos = parser.parse_pos(section)
 
-    assert pos.headlines == ['{{en-noun}}', '']
+    assert pos.headlines == ['{{en-noun}}']
     assert len(pos.senses) == 2
     assert pos.footlines == ['', '{{footer}}']
 
@@ -108,9 +108,15 @@ def test_newline():
 ===Adjective===
 {{en-adj}}
 
+Test
+
 # sense 1
 
 # sense 2
+
+Test
+
+Test
 """
 
     wikt = parser.parse(text, "test")
@@ -122,8 +128,14 @@ def test_newline():
     assert str(pos) == """\
 {{en-adj}}
 
+Test
+
 # sense 1
-# sense 2\
+# sense 2
+
+Test
+
+Test\
 """
 
 def test_empty():
