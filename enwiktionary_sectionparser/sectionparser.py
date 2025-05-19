@@ -142,11 +142,11 @@ class SectionParser():
 
                     # Empty sections should have a single leading empty line
                     elif not prev_section.content_wikilines and not prev_section._children and prev_section._leading_empty_lines != [""]:
-                        changes.append("adjusted whitespace per WT:NORM")
+                        changes.append("one empty line between sections per [[WT:NORM]]")
 
                     # All other sections should end with a single blank line
                     elif (prev_section.content_wikilines or prev_section._children) and prev_section._trailing_empty_lines != [""]:
-                        changes.append("adjusted whitespace per WT:NORM")
+                        changes.append("one empty line between sections per [[WT:NORM]]")
 
                     changes += prev_section._changes
 
@@ -155,8 +155,8 @@ class SectionParser():
                 else:
                     parent.add(new_section)
 
-                if new_section.header.rstrip() != wikiline:
-                    changes.append("adjusted whitespace per WT:NORM")
+                if new_section.header.strip() != wikiline:
+                    changes.append("no leading or trailing spaces on section headers per [[WT:NORM]]")
 
                 prev_section = new_section
                 continue
@@ -185,7 +185,7 @@ class Section():
 
     # Category templates should always be at the very end of the last section
     cat_templates = [ "c", "C", "cat", "top", "topic", "topics", "categorize", "catlangname", "catlangcode", "cln", "zh-cat",
-            "eo F", "eo [1-9]OA", "eo-categoryTOC", "eo BRO", "eo GCSE", "Universala Vortaro" ]
+            "eo F", "eo [1-9]OA", "eo-categoryTOC", "eo BRO", "eo GCSE", "Universala Vortaro", "yur-rhotacized" ]
     re_cat_templates = r"\{\{\s*(" + "|".join(cat_templates) + r")\s*[|}][^{}]*\}*"
     re_categories = r"\[\[\s*[cC]at(egory)?\s*:[^\]]*\]\]"
     re_match_categories = fr"({re_cat_templates}|{re_categories})"
@@ -296,11 +296,11 @@ class Section():
 
                 # if this is the first category, there should be one blank line before it
                 if not self._topmost._categories and self._trailing_empty_lines != [""]:
-                    self._changes.append("adjusted whitespace per WT:NORM")
+                    self._changes.append("one empty line before categories per [[WT:NORM]]")
 
                 # otherwise, there should be no blank lines
                 if self._topmost._categories and self._trailing_empty_lines != []:
-                    self._changes.append("adjusted whitespace per WT:NORM")
+                    self._changes.append("no empty lines between categories per [[WT:NORM]]")
 
                 # Strip any whitespace before the category
                 if self._trailing_empty_lines:
@@ -324,7 +324,7 @@ class Section():
                 # If any section before the final section contains a category, it will
                 # be moved to the bottom
                 if self._topmost._categories:
-                    self._changes.append(f"/*{self._topmost.path}*/ moved categories to end of language, per WT:ELE")
+                    self._changes.append(f"/*{self._topmost.path}*/ moved categories to end of language, per [[WT:ELE]]")
 
             return
 
