@@ -205,28 +205,44 @@ class PosParser():
 
         for item in items:
 
-            template_types = [self.template_to_type[m.group('t')] for m in re.finditer(self.re_templates, item.data)]
+            template_types = []
+            is_single_template = False
+            if "{{" in item.data:
+                wiki = mwparser.parse(item.data)
+                first_template = None
+                for t in wiki.ifilter_templates(recursive=False):
+                    template_type = self.template_to_type.get(t.name.strip())
+                    if template_type:
+                        template_types.append(template_type)
+
+                        if not first_template:
+                            first_template = t
+
+                if first_template:
+                    # Strip html comments before checking that text is a single template
+                    text = strip_safe_templates(wiki)
+                    text = strip_html_comments(item.data)
+                    # TODO: Strip categories
+                    text = strip_ref_tags(text)
+
+                    template_text = str(first_template)
+                    template_text = strip_html_comments(template_text)
+                    template_text = strip_ref_tags(template_text)
+
+                    is_single_template = template_text.strip() == text.strip()
+#                    print([template_text, text])
+
             if template_types:
                 if not all(t == template_types[0] for t in template_types):
                     item._type = "bad"
                 else:
-                    m = re.search(self.re_templates, item.data)
                     template_type = template_types[0]
-                    template_type = self.template_to_type[m.group('t')]
 
-                    # Strip html comments before checking that text is a single template
-                    text = strip_html_comments(item.data)
-                    text = strip_safe_templates(text)
-                    # TODO: Strip categories
-                    text = strip_ref_tags(text)
-                    text = text.strip()
-
-                    if template_type != "sense" and not is_template(m.group('t'), text):
-                        #print("NOT TEMPLATE", [m.group('t'), item.data])
+                    if template_type != "sense" and not is_single_template:
                         item._type = "bad"
 
                     # "zh-x" may be a quote or a ux, depending on the existence of a "ref=" parameter
-                    elif m.group("t") == "zh-x" and re.search(r"\|\s*ref\s*=", item.data):
+                    elif first_template.name == "zh-x" and first_template.has("ref"):
                         item._type = "quote"
 
                     else:
@@ -281,23 +297,12 @@ def strip_ref_tags(text):
 
 
 SAFE_TEMPLATES = ["att", "attn", "attention", "C", "c", "top", "topic", "anchor"]
-def strip_safe_templates(text):
-    wiki = mwparser.parse(text)
+def strip_safe_templates(wiki):
+    text = str(wiki)
     to_remove = [str(t) for t in wiki.ifilter_templates() if t.name in SAFE_TEMPLATES]
     for old in to_remove:
         text = text.replace(old, "")
     return text
-
-def is_template(template, text):
-    """ Returns True if text contains only {{template_name|...}} """
-
-    m = re.match(r"\{\{\s*" + template + r"\s*(?=[|}]).*}}$", text, flags=re.DOTALL)
-    if not m or m.group(0) != text:
-        return False
-
-    wiki = mwparser.parse(text)
-    t = next(wiki.ifilter_templates())
-    return str(t) == str(text)
 
 def has_link(text):
     return bool(re.search(r"(\[\[[^\[\]]+\]\]|{{\s*(l|m)\s*\|)", text))
