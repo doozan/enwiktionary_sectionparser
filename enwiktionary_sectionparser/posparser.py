@@ -25,7 +25,7 @@ class PosParser():
         "hyper": [ "hyper", "hypernyms", ],
         "hypo": [ "hypo", "hyponyms", ],
         "holo": [ "holo", "holonyms", "hol", ],
-        "merq": [ "mero", "meronyms", ],
+        "mero": [ "mero", "meronyms", "mer" ],
         "tropo": [ "troponyms", ],
         "comero": [ "comeronyms", ],
         "cot": [ "cot", "coordinate terms", "coordinate_terms", ],
