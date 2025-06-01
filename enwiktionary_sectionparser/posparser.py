@@ -20,6 +20,7 @@ import mwparserfromhell as mwparser
 class PosParser():
 
     TYPE_TO_TEMPLATES = {
+        "alti": [   "alti", "inline alt forms", "altform-inline", "zh-alt-inline", ],
         "syn": [ "syn", "synonyms", "syn-lite", "seeSynonyms", "syndiff", "synsee", ],
         "ant": [ "ant", "antonyms", "antonym", "ant-lite", ],
         "hyper": [ "hyper", "hypernyms", ],
@@ -34,7 +35,6 @@ class PosParser():
         "imperfect": [ "imperfectives" ],
         "active": [ "active-voice", ],
         "midvoice": [ "middle-voice", ],
-        "alti": [   "alti", "inline alt forms", ],
         "co": [ "co", "coi", "collocation", "zh-co", ],
         "cot": [ "cot", "coord", "coordinate terms", "coord-lite", ],
         "ux": [ "ux", "usex", "uxi", "ux-lite", "prefex", "prefixusex", "afex", "sufex", "suffixusex", "afex", "affixusex" ] \
