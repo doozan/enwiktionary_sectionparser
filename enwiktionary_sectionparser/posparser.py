@@ -30,26 +30,27 @@ class PosParser():
         "tropo": [ "troponyms", ],
         "comero": [ "comeronyms", ],
         "cot": [ "cot", "coordinate terms", "coordinate_terms", ],
-        "parasyn": [ "nearsyn", "parasynonyms", "parasyn", "par", ],
+        "parasyn": [ "nearsyn", "parasynonyms", "parasyn", "par", "near-syn", "near-synonyms" ],
         "perfect": [ "perfectives", ],
         "imperfect": [ "imperfectives" ],
         "active": [ "active-voice", ],
         "midvoice": [ "middle-voice", ],
-        "co": [ "co", "coi", "collocation", "zh-co", ],
+        "co": [ "co", "coi", "collocation", "coa", "zh-co", ],
         "cot": [ "cot", "coord", "coordinate terms", "coord-lite", ],
-        "ux": [ "ux", "usex", "uxi", "ux-lite", "prefex", "prefixusex", "afex", "sufex", "suffixusex", "afex", "affixusex" ] \
-            + sum([[k + "-x", k + "-x-inline", k + "-usex", k + "-usex-inline"] for k in ["ja", "hi", "ko", "th", "ur", "zh", "km", "ne"]], []),
+        "ux": [ "ux", "usex", "uxi", "ux-lite", "uxa", "prefex", "prefixusex", "afex", "sufex", "suffixusex", "afex", "affixusex" ] \
+            + sum([[k + "-x", k + "-x-inline", k + "-usex", k + "-usex-inline"] for k in ["ja", "hi", "ko", "th", "ur", "zh", "km", "ne", "ryu"]], []),
         "quote": [ "Q", "quote", "quotei", "quote-book", "quote-web", "quote-text", "quote-journal", "quote-av",
             "quote-song", "quote-video game", "quote-newsgroup", "quote-news", "quote-book-ur", "quote-hansard",
             "quote-lite", "quote-mailing list", "quote-us-patent", "quote-wikipedia",
             "grc-cite",
+            "zh-q",
             "seeCites", "seemoreCites", "seeMoreCites" ],
 
         # These aren't UX, but are better served when formatted as #: so they're not hidden by default
         "rfquote": [ "rfquote", "rfquote-sense", "rfquotek", "rfex" ],
 
         "sense": [ "lb", "lb-lite", "senseid", "defdate", "rfc-sense", "n-g", "q", "qual", "qualifier", "gloss", "ng",
-            "non-gloss definition", "place", "taxon" ],
+            "non-gloss definition", "place", "taxon", "tcl" ],
     }
 
     ALL_NYMS = [ "syn", "ant", "hyper", "hypo", "holo", "merq", "tropo", "comero", "cot", "parasyn", "perfect", "imperfect", "active", "midvoice", "alti" ]
