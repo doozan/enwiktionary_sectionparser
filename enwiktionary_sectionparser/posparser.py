@@ -325,7 +325,12 @@ def is_sentence(text):
 def is_italic(text):
     # Returns True if entire string is enclosed in '' italic wikimarkup
     ital = "(?<!')(?:'{2}|'{5})(?!')"
-    return re.match(fr"{ital}.*{ital}$", text) and not re.search(ital, text[2:-2])
+    return (m := re.match(fr"{ital}(.*){ital}[.?!]?$", text)) and not re.search(ital, m.group(1))
+
+def strip_italics(text):
+    ital = "(?<!')(?:'{2}|'{5})(?!')"
+    m = re.match(fr"({ital}.*{ital})([.?!])?$", text)
+    return m.group(1)[2:-2] + m.group(2) if m.group(2) else m.group(1)[2:-2]
 
 def is_bold(text):
     # Returns True if entire string is enclosed in ''' bold wikimarkup
