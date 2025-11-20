@@ -314,7 +314,8 @@ def strip_wikilinks(text):
 
 def strip_template_links(text):
     # only good enough for use by is_sentence
-    return re.sub(r"{{(?:l|m)[|].*?[|](.*?)}}", r"\1", text)
+    text = re.sub(r"{{(?:w)[|]([^|}]*?)}}", r"\1", text)
+    return re.sub(r"{{(?:l|m)[|].*?[|]([^|]*?)}}", r"\1", text)
 
 def is_sentence(text):
     text = strip_wikilinks(text)
