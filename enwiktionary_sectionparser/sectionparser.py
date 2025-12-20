@@ -185,7 +185,8 @@ class Section():
 
     # Category templates should always be at the very end of the last section
     cat_templates = [ "c", "C", "cat", "top", "topic", "topics", "categorize", "catlangname", "catlangcode", "cln", "zh-cat",
-            "eo F", "eo [1-9]OA", "eo-categoryTOC", "eo BRO", "eo GCSE", "Universala Vortaro", "yur-rhotacized" ]
+            "eo F", "eo [1-9]OA", "eo-categoryTOC", "eo BRO", "eo GCSE", "Universala Vortaro", "yur-rhotacized",
+            "commonscat", "commons category"]
     re_cat_templates = r"\{\{\s*(" + "|".join(cat_templates) + r")\s*[|}][^{}]*\}*"
     re_categories = r"\[\[\s*[cC]at(egory)?\s*:[^\]]*\]\]"
     re_match_categories = fr"({re_cat_templates}|{re_categories})"
