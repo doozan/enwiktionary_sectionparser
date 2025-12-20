@@ -96,7 +96,6 @@ class SectionParser():
         wikilines = list(wiki_splitlines(text, return_state=True))
         self._state = wikilines.pop()
 
-        wikiline = None
         for wikiline in wikilines:
 
             # New section start
@@ -141,11 +140,15 @@ class SectionParser():
                         changes.append("removed ---- L2 separator")
 
                     # Empty sections should have a single leading empty line
-                    elif not prev_section.content_wikilines and not prev_section._children and prev_section._leading_empty_lines != [""]:
+                    if not prev_section.content_wikilines and not prev_section._children and prev_section._leading_empty_lines != [""]:
                         changes.append("one empty line between sections per [[WT:NORM]]")
 
+                    # Non-Empty sections should have no preceeding empty lines
+                    if prev_section.content_wikilines and prev_section._leading_empty_lines != []:
+                        changes.append("No empty lines after headers per [[WT:NORM]]")
+
                     # All other sections should end with a single blank line
-                    elif (prev_section.content_wikilines or prev_section._children) and prev_section._trailing_empty_lines != [""]:
+                    if (prev_section.content_wikilines or prev_section._children) and prev_section._trailing_empty_lines != [""]:
                         changes.append("one empty line between sections per [[WT:NORM]]")
 
                     changes += prev_section._changes
