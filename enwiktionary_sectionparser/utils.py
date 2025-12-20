@@ -35,10 +35,10 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
     in_ref = False
     in_math = False
     in_pre = False
-    in_table = False
     in_link = False
     in_special_link = False
     template_stack = []
+    table_stack = []
 
 
     def get_state():
@@ -48,7 +48,7 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
             ("open_comment", in_comment),
             ("open_math", in_math),
             ("open_pre", in_pre),
-            ("open_table", in_table),
+            ("open_table", table_stack),
             ("open_link", in_link),
             ("open_special", in_special_link),
             ("open_templates", template_stack),
@@ -175,10 +175,11 @@ def wiki_finditer(pattern, text, flags=0, invert_matches=False, match_comments=F
             in_nowiki = None
 
         elif cmd == "{|":
-            in_table = m
+            table_stack.append(m)
 
         elif cmd == "|}":
-            in_table = None
+            if table_stack:
+                table_stack.pop()
 
         elif cmd == "[[special":
             in_special_link = m
